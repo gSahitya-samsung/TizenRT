@@ -1,0 +1,14 @@
+#
+# For a description of the syntax of this configuration file,
+# see kconfig-language at https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt
+#
+
+config EXAMPLES_FS_WRITE
+	bool "\"FS Write Test\" example"
+	default n
+	---help---
+		Enable the \"FS Write Example\" example
+
+config USER_ENTRYPOINT
+	string
+	default "fs_write_main" if ENTRY_FS_WRITE

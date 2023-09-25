@@ -1,0 +1,3 @@
+config ENTRY_FS_WRITE
+	bool "\FS Write\" example"
+	depends on EXAMPLES_FS_WRITE
