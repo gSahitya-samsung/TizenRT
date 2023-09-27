@@ -70,15 +70,14 @@
 
 void test()
 {
+
+	char writeBuffer[240];
+
 	for (int bufSize = 60; bufSize <= 240; bufSize *= 2) {
 		int totalTime = 0;
-		char writeBuffer[bufSize];
+		memset(writeBuffer, 'a', bufSize * sizeof(char));
 
-		for (int i = 0; i < bufSize; i++) {
-			writeBuffer[i] = 'a';
-		}
-
-		for (int itr=0; itr < 20; itr++){
+		for (int itr = 0; itr < 20; itr++) {
 
 			//time_t start, end;
 
@@ -87,7 +86,7 @@ void test()
 
 			//time(&start);
 
-			for(int file = 1; file<10; file++){
+			for(int file = 1; file < 10; file ++){
 
 				int fd;
 				char fileName[20];
@@ -98,18 +97,18 @@ void test()
 
 				if(fd<0){
 					printf("Unable to create file, ret = %d\n", errno);
-					continue;
+					goto fileCreateError;
 				}
 
 				write(fd, writeBuffer, bufSize);
 				close(fd);
 
 				for(int i=1; i<200; i++){
-					fd = open(fileName, O_WRONLY | O_CREAT);
+					fd = open(fileName, O_WRONLY);
 
 					if (fd < 0) {
 						printf("Unable to create file, ret = %d\n", errno);
-						break;
+						goto fileCreateError;
 					}
 
 
@@ -123,7 +122,7 @@ void test()
 			//time(&end);
 			gettimeofday(&end, NULL);
 
-			for(int file=0; file<10; file++){
+			for(int file = 0; file < 10; file++){
 				char fileName[20];
 				snprintf(fileName, 20, "/mnt/file_%d.txt", file);
 				unlink(fileName);
@@ -138,9 +137,12 @@ void test()
 
 		}
 
-		printf("Total time taken for buffer of size: %d bytes: %lu microseconds\n",bufSize,totalTime);
+		printf("Total time taken for buffer of size: %d bytes: %lu microseconds\n", bufSize, totalTime);
 
 	}
+
+	fileCreateError:
+		return ;
 }
 
 //#define CONFIG_BUILD_KERNEL 1
