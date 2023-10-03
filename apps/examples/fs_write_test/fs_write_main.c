@@ -139,13 +139,14 @@ int create_PPE(const char *dir_path)
 		goto errHandler;
 	}
 
-	char buf[64 * 1024 + 1];
-
+	// char buf[64 * 1024 + 1];
+	char *buf = (char *) malloc(64 * 1024 + 1);
 	ret = read(fd, buf, 64 * 1024);
 
 	if (ret != 64 *1024) {
 		printf("Unable to read from Sample File\n, ret = %d", ret);
 		close(fd);
+		free(buf);
 		goto errHandler;
 	}
 
@@ -171,6 +172,8 @@ int create_PPE(const char *dir_path)
 		close(fd);
 		unlink(TEST_FILE_SINGLE);
 	}
+
+	free(buf);
 
 	printf("PPE Exits\n");
 	return OK;
@@ -340,7 +343,7 @@ void test()
 		}
 	}
 
-	for (int bufSize = 60; bufSize <= 60; bufSize *= 2) {
+	for (int bufSize = 60; bufSize <= 240; bufSize *= 2) {
 		int totalTime = 0;
 		//memset(writeBuffer, 'a', bufSize * sizeof(char));
 
@@ -389,11 +392,11 @@ void test()
 			//time(&end);
 			gettimeofday(&end, NULL);
 
-			// for(int file = 0; file < 10; file++){
-			// 	char fileName[30];
-			// 	snprintf(fileName, 30, "%s%d.txt", TEST_FILE_MULTIPLE, file);
-			// 	unlink(fileName);
-			// }
+			for(int file = 0; file < 10; file++){
+				char fileName[30];
+				snprintf(fileName, 30, "%s%d.txt", TEST_FILE_MULTIPLE, file);
+				unlink(fileName);
+			}
 
 			//double itrTime = difftime(end,start);
 
