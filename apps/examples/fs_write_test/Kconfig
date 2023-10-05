@@ -9,6 +9,22 @@ config EXAMPLES_FS_WRITE
 	---help---
 		Enable the \"FS Write Example\" example
 
+if EXAMPLES_FS_WRITE
+
+# config EXAMPLES_FS_WRITE_PROGNAME
+#	string "Program name"
+#	default "tls_client"
+#	depends on BUILD_KERNEL
+
+menu option
+config EXAMPLES_FS_WRITE_VALIDATE
+	bool "Validate Writes"
+	default n
+	depends on EXAMPLES_FS_WRITE
+endmenu
+
+endif # EXAMPLES_FS_WRITE
+
 config USER_ENTRYPOINT
 	string
 	default "fs_write_main" if ENTRY_FS_WRITE
