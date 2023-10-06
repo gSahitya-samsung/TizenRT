@@ -67,16 +67,16 @@
 #include <sys/stat.h>
 #include <string.h>
 
-#define ROOT "/mnt/"
-#define SAMPLE_FILE ROOT "sample_file"
-#define TEST_DIR_SINGLE ROOT "single"
-#define TEST_FILE_SINGLE ROOT "single/test_file"
-#define TEST_DIR_MULTIPLE ROOT "multiple"
-#define TEST_FILE_MULTIPLE ROOT "multiple/test_file_"
-#define TEST_FILE_NAME_LEN_MAX 42
-#define TEST_ITR 10
-#define TIMER_DEVICE "/dev/timer0"
-#define FS_PART_SIZE 512
+#define ROOT 						"/mnt/"
+#define SAMPLE_FILE 					ROOT "sample_file"
+#define TEST_DIR_SINGLE 				ROOT "single"
+#define TEST_FILE_SINGLE 				ROOT "single/test_file"
+#define TEST_DIR_MULTIPLE 				ROOT "multiple"
+#define TEST_FILE_MULTIPLE 				ROOT "multiple/test_file_"
+#define TEST_FILE_NAME_LEN_MAX 				42
+#define TEST_ITR 					10
+#define TIMER_DEVICE 					"/dev/timer0"
+#define FS_PART_SIZE 					512
 
 int frt_fd = -1;
 
@@ -87,57 +87,62 @@ int frt_fd = -1;
  ****************************************************************************/
 
 
-void validate(char *buf, char *fileName, int nChar)
+int validate(char *buf, char *fileName, int nChar, int times, int offset)
 {
 	#ifdef CONFIG_EXAMPLES_FS_WRITE_VALIDATE
 
-	int fd = open(fileName, O_RDONLY);
+	int fd, ret, i, j;
+	char *tempBuf;
+	bool valid;
+
+	fd = open(fileName, O_RDONLY);
 
 	if(fd < 0) {
 		printf("Unable to open file = %s, error = %s\n", fileName, strerror(errno));
 		printf("Write Verification Failed\n");
-		// return -errno;
-		// goto errHandler;
 	}
 
-	// int fileLen =  
-
-	char *tempBuf = (char *) malloc(nChar + 1);
-	int ret = lseek(fd, -nChar, SEEK_END);
-
-	// printf("Lseek = %d\n", ret);
+	ret = lseek(fd, offset, SEEK_SET);
 
 	if(ret < 0) {
-		printf("Unable to lseek file = %s, error = %s\n", fileName, strerror(errno));
+		printf("Unable to lseek for file = %s, error = %s\n", fileName, strerror(errno));
 		goto errHandler;
 	}
 
 
-	ret = read(fd, tempBuf, nChar);
+	tempBuf = (char *) malloc(nChar + 1);
 
-	// printf("%s\n", tempBuf);
-	// printf("%s\n", buf);
+	valid = true;
 
-	if (ret != nChar) {
-		printf("%d\n", nChar);
-		printf("Unable to read file = %s, error = %s, ret = %d\n",fileName, strerror(errno), ret);
-		goto errHandler;
-	}
+	for (i = 0; (i < times) && valid; i++) {
 
-	for (int i = 0; i < nChar; i++) {
-		if (buf[i] != tempBuf[i]) {
-			printf("Write Verification Failed\n");
-			printf("Expected to write: %.*s\n", nChar, buf);
-			printf("Written: %s\n", tempBuf);
-			close(fd);
-			free(tempBuf);
-			return;
+		ret = read(fd, tempBuf, nChar);
+
+		if (ret != nChar) {
+			printf("%d\n", nChar);
+			printf("Unable to read file = %s, error = %s, ret = %d\n",fileName, strerror(errno), ret);
+			goto errHandler;
+		}
+
+
+		for (j = 0; (j < nChar) && valid ; j++) {
+			if (buf[i] != tempBuf[i]) {
+				printf("Write Verification Failed\n");
+				printf("Expected to write: %.*s\n", nChar, buf);
+				printf("Written: %s\n", tempBuf);
+				valid = false;
+			}
 		}
 	}
 
-	printf("Write Verification Success\n");
-	printf("Expected to write: %.*s\n", nChar, buf);
-	printf("Written: %s\n", tempBuf);
+
+
+	if (valid) {
+		printf("Write Verification Success\n");
+		printf("Expected to write: %.*s\n", nChar, buf);
+		printf("Written: %s\n", tempBuf);
+	}
+
 
 	free(tempBuf);
 	close(fd);
@@ -146,8 +151,10 @@ void validate(char *buf, char *fileName, int nChar)
 	errHandler:
 		close(fd);
 		free(tempBuf);
-		printf("Write Verification Failed");
-		return;
+		printf("Write Verification Failed\n");
+		return -errno;
+	#else
+	return OK;
 	#endif
 
 }
@@ -156,6 +163,7 @@ int init_sample_file(int buffer_size)
 {
 	char buf[] = "Writing data into sample file\n";
 	int fd = open(SAMPLE_FILE, O_CREAT | O_WRONLY);
+	int bufLen, i, wrtLen;
 
 	if (fd < 0) {
 		printf("Unable to open sample file: %s, fd = %d\n", SAMPLE_FILE, fd);
@@ -163,11 +171,11 @@ int init_sample_file(int buffer_size)
 		return -ENOMEM;
 	}
 
-	int bufLen = strlen(buf);
+	bufLen = strlen(buf);
 
-	for (int i = 0; i < (buffer_size / bufLen) + 1; i++) {
+	for (i = 0; i < (buffer_size / bufLen) + 1; i++) {
 
-		int wrtLen = write(fd, buf, bufLen);
+		wrtLen = write(fd, buf, bufLen);
 
 		if (wrtLen != bufLen) {
 			printf("Unable to write to sample file, fd = %d, write length = %d", fd, wrtLen);
@@ -184,6 +192,8 @@ int init_sample_file(int buffer_size)
 int create_PPE(const char *dir_path)
 {
 	int ret = mkdir(dir_path, S_IRWXG | S_IRWXO | S_IRWXU);
+	int fd_sample, i, fd, j;
+	char *buf;
 
 	if (ret < 0) {
 		printf("Unable to create test directory = %s\n", dir_path);
@@ -194,7 +204,7 @@ int create_PPE(const char *dir_path)
 		}
 	}
 
-	int fd_sample = open(SAMPLE_FILE, O_RDONLY);
+	fd_sample = open(SAMPLE_FILE, O_RDONLY);
 
 	if (fd_sample < 0) {
 		printf("Unable to open sample file for reading\n");
@@ -203,23 +213,12 @@ int create_PPE(const char *dir_path)
 		goto errHandler;
 	}
 
-	// char buf[32 + 1];
-	char *buf = (char *) malloc(2 * 1024 + 1);
-	// ret = read(fd, buf, 64 * 1024);
+	buf = (char *) malloc(2 * 1024 + 1);
 
-	// if (ret != 64 * 1024) {
-	// 	printf("Unable to read from Sample File\n, ret = %d", ret);
-	// 	close(fd);
-	// 	free(buf);
-	// 	goto errHandler;
-	// }
-
-	// close(fd);
-
-	for (int i = 0; i < ((FS_PART_SIZE - 128) / 64); i++) {
+	for (i = 0; i < ((FS_PART_SIZE - 128) / 64); i++) {
 		printf("Writing Garbage file #%d\n", i);
 
-		int fd = open(TEST_FILE_SINGLE, O_CREAT | O_WRONLY);
+		fd = open(TEST_FILE_SINGLE, O_CREAT | O_WRONLY);
 
 		if (fd < 0) {
 			printf("Failed to open garbage file for creation\n");
@@ -227,7 +226,7 @@ int create_PPE(const char *dir_path)
 			goto errHandler;
 		}
 
-		for (int j = 0; j < 32; j++) {
+		for (j = 0; j < 32; j++) {
 			ret = read(fd_sample, buf, 2 * 1024);
 
 			if (ret != 2 * 1024) {
@@ -250,13 +249,6 @@ int create_PPE(const char *dir_path)
 		
 		lseek(fd_sample, 0, SEEK_SET);
 
-		// ret = write(fd, buf, 64 * 1024);
-
-		// if (ret != 64 * 1024) {
-		// 	printf("Unable to write to garbage file\n");
-		// 	goto errHandler;
-		// }
-
 		close(fd);
 		unlink(TEST_FILE_SINGLE);
 	}
@@ -267,9 +259,9 @@ int create_PPE(const char *dir_path)
 	printf("PPE Exits\n");
 	return OK;
 
-errHandler:
-	printf("RRE Exits\n");
-	return -EIO;
+	errHandler:
+		printf("PPE Exits\n");
+		return -EIO;
 }
 
 int create_max_file(char *fileName, long int size)
@@ -277,6 +269,7 @@ int create_max_file(char *fileName, long int size)
 	char buf[] = "Writing data to tha sample file\n";
 
 	int fd = open(fileName, O_CREAT | O_WRONLY);
+	int ret;
 
 	if (fd < 0) {
 		printf("Unable to open sample file: %s, fd = %d\n", fileName, fd);
@@ -284,7 +277,7 @@ int create_max_file(char *fileName, long int size)
 	}
 
 	while (size >= strlen(buf)) {
-		int ret = write(fd, buf, strlen(buf));
+		ret = write(fd, buf, strlen(buf));
 
 		if (ret != strlen(buf)) {
 			printf("Unable to write to file %s, fd = %d\n", fileName, ret);
@@ -295,7 +288,7 @@ int create_max_file(char *fileName, long int size)
 	}
 
 	if (size) {
-		int ret = write(fd, buf, size);
+		ret = write(fd, buf, size);
 
 		if (ret != size) {
 			printf("Unable to write to file %s, ret = %d\n", fileName, ret);
@@ -311,12 +304,16 @@ int create_max_file(char *fileName, long int size)
 	return OK;
 }
 
-void test()
+int test()
 {
 
+	int ret, fd, i, bufSize, totalTime, itr, nFiles, file, itrTime;
 	char writeBuffer[240 + 1];
+	char multiFileName[TEST_FILE_NAME_LEN_MAX];
+	char fileName[30];
+	struct timeval start, end;
 
-	int ret = create_PPE(TEST_DIR_SINGLE);
+	ret = create_PPE(TEST_DIR_SINGLE);
 
 	if (ret != OK) {
 		printf("Unable to create PPE\n");
@@ -325,7 +322,7 @@ void test()
 
 	printf("PPE Complete\n");
 
-	int fd = open(SAMPLE_FILE, O_RDONLY);
+	fd = open(SAMPLE_FILE, O_RDONLY);
 
 	if (fd < 0) {
 		printf("Failed to open sample file for reading\n");
@@ -341,16 +338,13 @@ void test()
 
 	close(fd);
 
-	char multiFileName[TEST_FILE_NAME_LEN_MAX];
-
-	for (int i = 0; i < 4; i++) {
+	for (i = 0; i < 4; i++) {
 		snprintf(multiFileName, TEST_FILE_NAME_LEN_MAX, "%s_%d", TEST_FILE_SINGLE, i);
 		ret = create_max_file(multiFileName, 64 * 1024);
 		if (ret != OK) {
-			printf("Unable to create dummy file\n");
+			printf("Unable to create dummy file%d\n",i);
 			printf("%s\n", strerror(errno));
 			goto fileCreateError;
-			//return -errno;
 		}
 	}
 
@@ -365,19 +359,16 @@ void test()
 		}
 	}
 
-	for (int bufSize = 60; bufSize <= 240; bufSize *= 2) {
-		int totalTime = 0;
+	for (bufSize = 60; bufSize <= 240; bufSize *= 2) {
+		totalTime = 0;
 
-		for (int itr = 0; itr < 20; itr++) {
+		for (itr = 0; itr < 20; itr++) {
 
-			struct timeval start, end;
 			gettimeofday(&start, NULL);
 
-			int nFiles = (bufSize == 240) ? 8 : 10;
+			nFiles = (bufSize == 240) ? 8 : 10;
 
-			for (int file = 1; file <= nFiles; file++) {
-
-				char fileName[30];
+			for (file = 1; file <= nFiles; file++) {
 
 				snprintf(fileName, 30, "%s%d.txt", TEST_FILE_MULTIPLE, file);
 
@@ -388,7 +379,7 @@ void test()
 					goto fileCreateError;
 				}
 
-				int ret = write(fd, writeBuffer, bufSize);
+				ret = write(fd, writeBuffer, bufSize);
 
 				if (ret != bufSize) {
 					printf("Unable to write to file = %s, error = %s\n", fileName, strerror(errno));
@@ -397,9 +388,15 @@ void test()
 				}
 
 				close(fd);
-				validate(writeBuffer, fileName, bufSize);
+				
+				ret = validate(writeBuffer, fileName, bufSize, 1, 0);
 
-				for (int i = 1; i < 200; i++) {
+				if(ret != OK) {
+					printf("Verification1 failed\n");
+					goto runtimeError;
+				}
+
+				for (i = 1; i < 200; i++) {
 					fd = open(fileName, O_WRONLY);
 
 					if (fd < 0) {
@@ -410,19 +407,23 @@ void test()
 					lseek(fd, 0, SEEK_END);
 					write(fd, writeBuffer, bufSize);
 					close(fd);
-					validate(writeBuffer, fileName, bufSize);
+				}
+
+				ret = validate(writeBuffer, fileName, bufSize, 199, bufSize);
+				if(ret != OK) {
+					printf("Verification2 failed\n");
+					goto runtimeError;
 				}
 			}
 
 			gettimeofday(&end, NULL);
 
-			for (int file = 0; file < 10; file++) {
-				char fileName[30];
+			for (file = 0; file < nFiles; file++) {
 				snprintf(fileName, 30, "%s%d.txt", TEST_FILE_MULTIPLE, file);
 				unlink(fileName);
 			}
 
-			int itrTime = (end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec;
+			itrTime = (end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec;
 
 			printf("Time taken: %lu microseconds\n", itrTime);
 			totalTime += itrTime;
@@ -431,8 +432,14 @@ void test()
 		printf("Total time taken for buffer of size: %d bytes: %lu microseconds\n", bufSize, totalTime);
 	}
 
-fileCreateError:
-	return;
+	return OK;
+
+	fileCreateError:
+		printf("Error = %s\n", strerror(errno));
+		return -errno;
+
+	runtimeError:
+		return -1;
 }
 
 // #define CONFIG_BUILD_KERNEL 1
