@@ -74,6 +74,14 @@
 #include <tinyara/fs/procfs.h>
 #endif
 
+
+
+int writeCounts  = 0;
+int readCounts = 0;
+int bwriteCounts = 0;
+int breadCounts = 0;
+int eraseCounts = 0;
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -230,6 +238,7 @@ static bool part_bytecheck(FAR struct mtd_partition_s *priv, off_t byoff)
 
 static int part_erase(FAR struct mtd_dev_s *dev, off_t startblock, size_t nblocks)
 {
+	eraseCounts += (int) nblocks;
 	FAR struct mtd_partition_s *priv = (FAR struct mtd_partition_s *)dev;
 	off_t eoffset;
 
@@ -264,6 +273,7 @@ static int part_erase(FAR struct mtd_dev_s *dev, off_t startblock, size_t nblock
 
 static ssize_t part_bread(FAR struct mtd_dev_s *dev, off_t startblock, size_t nblocks, FAR uint8_t *buf)
 {
+	breadCounts += (int) nblocks;
 	FAR struct mtd_partition_s *priv = (FAR struct mtd_partition_s *)dev;
 
 	DEBUGASSERT(priv && (buf || nblocks == 0));
@@ -292,6 +302,7 @@ static ssize_t part_bread(FAR struct mtd_dev_s *dev, off_t startblock, size_t nb
 
 static ssize_t part_bwrite(FAR struct mtd_dev_s *dev, off_t startblock, size_t nblocks, FAR const uint8_t *buf)
 {
+	bwriteCounts += (int) nblocks;
 	FAR struct mtd_partition_s *priv = (FAR struct mtd_partition_s *)dev;
 
 	DEBUGASSERT(priv && (buf || nblocks == 0));
@@ -320,6 +331,7 @@ static ssize_t part_bwrite(FAR struct mtd_dev_s *dev, off_t startblock, size_t n
 
 static ssize_t part_read(FAR struct mtd_dev_s *dev, off_t offset, size_t nbytes, FAR uint8_t *buffer)
 {
+	readCounts += (int) nbytes;
 	FAR struct mtd_partition_s *priv = (FAR struct mtd_partition_s *)dev;
 	off_t newoffset;
 
@@ -355,6 +367,7 @@ static ssize_t part_read(FAR struct mtd_dev_s *dev, off_t offset, size_t nbytes,
 #ifdef CONFIG_MTD_BYTE_WRITE
 static ssize_t part_write(FAR struct mtd_dev_s *dev, off_t offset, size_t nbytes, FAR const uint8_t *buffer)
 {
+	writeCounts += (int) nbytes;
 	FAR struct mtd_partition_s *priv = (FAR struct mtd_partition_s *)dev;
 	off_t newoffset;
 
@@ -396,6 +409,16 @@ static int part_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
 	DEBUGASSERT(priv);
 
 	switch (cmd) {
+	
+	case MTDIOC_PRINT: {
+		printf("WriteCounts = %d\n", writeCounts);
+		printf("ReadCounts = %d\n", readCounts);
+		printf("BwriteCounts = %d\n", bwriteCounts);
+		printf("BreadCounts = %d\n", breadCounts);
+		printf("EraseCounts = %d\n", eraseCounts);
+	}
+	break;
+
 	case MTDIOC_GEOMETRY: {
 		FAR struct mtd_geometry_s *geo = (FAR struct mtd_geometry_s *)arg;
 		if (geo) {

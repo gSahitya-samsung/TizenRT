@@ -263,6 +263,8 @@
 										 *      command and data.
 										 * OUT: None.  */
 
+#define BIOC_PRINT		_BIOC(0x000E)
+
 /* TinyAra MTD driver ioctl definitions ***************************************/
 
 #define _MTDIOCVALID(c)   (_IOC_TYPE(c) == _MTDIOCBASE)
@@ -282,6 +284,8 @@
 											 * OUT: None */
 #define MTDIOC_SETSPEED   _MTDIOC(0x0004)	/* IN:  New bus speed in Hz
 											 * OUT: None */
+
+#define MTDIOC_PRINT	  _MTDIOC(0x0005)
 
 /* TinyAra ARP driver ioctl definitions (see include/netinet/arp.h) *******************/
 

@@ -4813,6 +4813,11 @@ static int smart_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
 	 */
 
 	switch (cmd) {
+	
+	case BIOC_PRINT: {
+		MTD_IOCTL(dev->mtd, MTDIOC_PRINT, 0);
+	}
+	break;
 	case BIOC_XIPBASE:
 		/* The argument accompanying the BIOC_XIPBASE should be non-NULL.  If
 		 * DEBUG is enabled, we will catch it here instead of in the MTD

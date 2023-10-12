@@ -79,6 +79,7 @@
 #define FS_PART_SIZE 					512
 
 int frt_fd = -1;
+int fs_fd = -1;
 
 // #define OK 0
 
@@ -335,6 +336,7 @@ int test()
 		printf("Unable to read from sample file\n");
 		printf("%s\n", strerror(errno));
 	}
+	ioctl(fs_fd, -18, 0);
 
 	close(fd);
 
@@ -386,6 +388,9 @@ int test()
 					close(fd);
 					goto fileCreateError;
 				}
+
+
+				ioctl(fs_fd, -18, 0);
 
 				close(fd);
 				
@@ -450,6 +455,7 @@ int main(int argc, FAR char *argv[])
 int fs_write_main(int argc, char *argv[])
 #endif
 {
+	fs_fd = open("fsmnt/vfs", O_RDWR | O_CREAT);
 	int ret = init_sample_file(64 * 1024);
 
 	if (ret != OK) {
@@ -458,7 +464,6 @@ int fs_write_main(int argc, char *argv[])
 	}
 
 	test();
-
 errHandler:
 	return ret;
 }
