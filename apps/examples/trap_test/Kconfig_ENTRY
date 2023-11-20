@@ -1,0 +1,3 @@
+config ENTRY_HELLO
+	bool "\"Trap, Test\" example"
+	depends on EXAMPLES_TRAP

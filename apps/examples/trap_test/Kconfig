@@ -1,0 +1,14 @@
+#
+# For a description of the syntax of this configuration file,
+# see kconfig-language at https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt
+#
+
+config EXAMPLES_TRAP
+	bool "\"Trap, Test\" example"
+	default n
+	---help---
+		Enable the \"Trap, Test\" example
+
+config USER_ENTRYPOINT
+	string
+	default "trap_main" if ENTRY_TRAP

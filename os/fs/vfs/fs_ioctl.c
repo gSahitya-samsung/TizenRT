@@ -155,15 +155,6 @@ int ioctl(int fd, int req, unsigned long arg)
 	FAR struct file *filep;
 	int ret;
 
-	if (req == -18) {
-		ret = file_ioctl(filep, req, arg);
-		if (ret < 0) {
-			errcode = -ret;
-			goto errout;
-		}
-		return ret;
-	}
-
 	/* Did we get a valid file descriptor? */
 
 	if ((unsigned int)fd >= CONFIG_NFILE_DESCRIPTORS) {

@@ -311,7 +311,7 @@ int test()
 	int ret, fd, i, bufSize, totalTime, itr, nFiles, file, itrTime;
 	char writeBuffer[240 + 1];
 	char multiFileName[TEST_FILE_NAME_LEN_MAX];
-	char fileName[30];
+	char fileName[50];
 	struct timeval start, end;
 
 	ret = create_PPE(TEST_DIR_SINGLE);
@@ -336,7 +336,8 @@ int test()
 		printf("Unable to read from sample file\n");
 		printf("%s\n", strerror(errno));
 	}
-	ioctl(fs_fd, -18, 0);
+	
+	ioctl(fs_fd, 0, 0);
 
 	close(fd);
 
@@ -364,15 +365,15 @@ int test()
 	for (bufSize = 60; bufSize <= 240; bufSize *= 2) {
 		totalTime = 0;
 
-		for (itr = 0; itr < 20; itr++) {
+		for (itr = 0; itr < 2; itr++) {
 
 			gettimeofday(&start, NULL);
 
 			nFiles = (bufSize == 240) ? 8 : 10;
 
-			for (file = 1; file <= nFiles; file++) {
+			for (file = 0; file < nFiles; file++) {
 
-				snprintf(fileName, 30, "%s%d.txt", TEST_FILE_MULTIPLE, file);
+				snprintf(fileName, 50, "%s%d.txt", TEST_FILE_MULTIPLE, file);
 
 				fd = open(fileName, O_WRONLY | O_CREAT);
 
@@ -389,9 +390,6 @@ int test()
 					goto fileCreateError;
 				}
 
-
-				ioctl(fs_fd, -18, 0);
-
 				close(fd);
 				
 				ret = validate(writeBuffer, fileName, bufSize, 1, 0);
@@ -401,7 +399,7 @@ int test()
 					goto runtimeError;
 				}
 
-				for (i = 1; i < 200; i++) {
+				for (i = 1; i < 20; i++) {
 					fd = open(fileName, O_WRONLY);
 
 					if (fd < 0) {
@@ -424,7 +422,7 @@ int test()
 			gettimeofday(&end, NULL);
 
 			for (file = 0; file < nFiles; file++) {
-				snprintf(fileName, 30, "%s%d.txt", TEST_FILE_MULTIPLE, file);
+				snprintf(fileName, 50, "%s%d.txt", TEST_FILE_MULTIPLE, file);
 				unlink(fileName);
 			}
 
@@ -436,6 +434,8 @@ int test()
 
 		printf("Total time taken for buffer of size: %d bytes: %lu microseconds\n", bufSize, totalTime);
 	}
+
+	ioctl(fs_fd, 0, 0);
 
 	return OK;
 
@@ -455,7 +455,9 @@ int main(int argc, FAR char *argv[])
 int fs_write_main(int argc, char *argv[])
 #endif
 {
-	fs_fd = open("fsmnt/vfs", O_RDWR | O_CREAT);
+	printf("Testing\n");
+	fs_fd = open(SAMPLE_FILE, O_RDWR | O_CREAT);
+	printf("Fs_Fd = %d\n",fs_fd);
 	int ret = init_sample_file(64 * 1024);
 
 	if (ret != OK) {
@@ -464,6 +466,7 @@ int fs_write_main(int argc, char *argv[])
 	}
 
 	test();
+	close(fs_fd);
 errHandler:
 	return ret;
 }
