@@ -1,0 +1,3 @@
+config ENTRY_FS_READ
+	bool "\FS Read\" example"
+	depends on EXAMPLES_FS_READ

@@ -1,0 +1,30 @@
+#
+# For a description of the syntax of this configuration file,
+# see kconfig-language at https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt
+#
+
+config EXAMPLES_FS_READ
+	bool "\"FS Read Test\" example"
+	default n
+	---help---
+		Enable the \"FS Read Example\" example
+
+if EXAMPLES_FS_READ
+
+# config EXAMPLES_FS_READ_PROGNAME
+#	string "Program name"
+#	default "tls_client"
+#	depends on BUILD_KERNEL
+
+menu option
+config EXAMPLES_FS_READ_VALIDATE
+	bool "Validate Reads"
+	default n
+	depends on EXAMPLES_FS_READ
+endmenu
+
+endif # EXAMPLES_FS_READ
+
+config USER_ENTRYPOINT
+	string
+	default "fs_read_main" if ENTRY_FS_READ

@@ -80,7 +80,6 @@
 
 int frt_fd = -1;
 int fs_fd = -1;
-
 // #define OK 0
 
 /****************************************************************************
@@ -307,12 +306,12 @@ int create_max_file(char *fileName, long int size)
 
 int test()
 {
-
-	int ret, fd, i, bufSize, totalTime, itr, nFiles, file, itrTime;
+	unsigned int long long totalTime, itrTime;
+	int ret, fd, i, bufSize, itr, nFiles, file;
 	char writeBuffer[240 + 1];
 	char multiFileName[TEST_FILE_NAME_LEN_MAX];
 	char fileName[50];
-	struct timeval start, end;
+	struct timer_status_s start, end;
 
 	ret = create_PPE(TEST_DIR_SINGLE);
 
@@ -364,13 +363,25 @@ int test()
 
 	for (bufSize = 60; bufSize <= 240; bufSize *= 2) {
 		totalTime = 0;
+		if (bufSize == 120) {
+			snprintf(multiFileName, TEST_FILE_NAME_LEN_MAX, "%s_%d", TEST_FILE_SINGLE, 0);
+			unlink(multiFileName);
+			snprintf(multiFileName, TEST_FILE_NAME_LEN_MAX, "%s_%d", TEST_FILE_SINGLE, 1);
+			unlink(multiFileName);
+		}
+		if (bufSize == 240) {
+			snprintf(multiFileName, TEST_FILE_NAME_LEN_MAX, "%s_%d", TEST_FILE_SINGLE, 2);
+			unlink(multiFileName);
+			snprintf(multiFileName, TEST_FILE_NAME_LEN_MAX, "%s_%d", TEST_FILE_SINGLE, 3);
+			unlink(multiFileName);
+		}
 
-		for (itr = 0; itr < 2; itr++) {
-
-			gettimeofday(&start, NULL);
+		for (itr = 0; itr < 20; itr++) {
 
 			nFiles = (bufSize == 240) ? 8 : 10;
-
+			// gettimeofday(&start, NULL);
+			ioctl(frt_fd, TCIOC_START, TRUE);
+			ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&start);
 			for (file = 0; file < nFiles; file++) {
 
 				snprintf(fileName, 50, "%s%d.txt", TEST_FILE_MULTIPLE, file);
@@ -399,11 +410,11 @@ int test()
 					goto runtimeError;
 				}
 
-				for (i = 1; i < 20; i++) {
+				for (i = 1; i < 200; i++) {
 					fd = open(fileName, O_WRONLY);
 
 					if (fd < 0) {
-						printf("Unable to create file, ret = %d\n", errno);
+						printf("Unable to open file, ret = %d\n", errno);
 						goto fileCreateError;
 					}
 
@@ -418,24 +429,27 @@ int test()
 					goto runtimeError;
 				}
 			}
+			ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&end);
+			ioctl(frt_fd, TCIOC_STOP, 0);
 
-			gettimeofday(&end, NULL);
+			// gettimeofday(&end, NULL);
 
 			for (file = 0; file < nFiles; file++) {
 				snprintf(fileName, 50, "%s%d.txt", TEST_FILE_MULTIPLE, file);
 				unlink(fileName);
 			}
 
-			itrTime = (end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec;
+			// itrTime = (end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec;
+			itrTime =  end.timeleft - start.timeleft;
 
-			printf("Time taken: %lu microseconds\n", itrTime);
+			printf("Time taken: %llu microseconds\n", itrTime);
+			ioctl(fs_fd, 0, 0);
 			totalTime += itrTime;
 		}
 
-		printf("Total time taken for buffer of size: %d bytes: %lu microseconds\n", bufSize, totalTime);
+		printf("Total time taken for buffer of size: %d bytes: %llu microseconds\n", bufSize, totalTime);
 	}
 
-	ioctl(fs_fd, 0, 0);
 
 	return OK;
 
@@ -464,6 +478,9 @@ int fs_write_main(int argc, char *argv[])
 		printf("Unable to init sample test file, ret = %d\n", ret);
 		goto errHandler;
 	}
+
+	frt_fd = open("/dev/timer0", O_RDONLY);
+	ioctl(frt_fd, TCIOC_SETMODE, MODE_FREERUN);
 
 	test();
 	close(fs_fd);

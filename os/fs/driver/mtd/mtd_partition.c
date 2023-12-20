@@ -76,11 +76,13 @@
 
 
 
-int writeCounts  = 0;
-int readCounts = 0;
-int bwriteCounts = 0;
-int breadCounts = 0;
-int eraseCounts = 0;
+unsigned int long long writeCounts  = 0;
+unsigned int long long readCounts = 0;
+unsigned int long long bwriteCounts = 0;
+unsigned int long long breadCounts = 0;
+unsigned int long long eraseCounts = 0;
+unsigned int long long readCalls = 0;
+unsigned int long long breadCalls = 0;
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -274,6 +276,7 @@ static int part_erase(FAR struct mtd_dev_s *dev, off_t startblock, size_t nblock
 static ssize_t part_bread(FAR struct mtd_dev_s *dev, off_t startblock, size_t nblocks, FAR uint8_t *buf)
 {
 	breadCounts += (int) nblocks;
+	breadCalls += 1;
 	FAR struct mtd_partition_s *priv = (FAR struct mtd_partition_s *)dev;
 
 	DEBUGASSERT(priv && (buf || nblocks == 0));
@@ -332,6 +335,7 @@ static ssize_t part_bwrite(FAR struct mtd_dev_s *dev, off_t startblock, size_t n
 static ssize_t part_read(FAR struct mtd_dev_s *dev, off_t offset, size_t nbytes, FAR uint8_t *buffer)
 {
 	readCounts += (int) nbytes;
+	readCalls += 1;
 	FAR struct mtd_partition_s *priv = (FAR struct mtd_partition_s *)dev;
 	off_t newoffset;
 
@@ -411,11 +415,11 @@ static int part_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
 	switch (cmd) {
 	
 	case MTDIOC_PRINT: {
-		printf("WriteCounts = %d\n", writeCounts);
-		printf("ReadCounts = %d\n", readCounts);
-		printf("BwriteCounts = %d\n", bwriteCounts);
-		printf("BreadCounts = %d\n", breadCounts);
-		printf("EraseCounts = %d\n", eraseCounts);
+		printf("WriteCounts = %llu\n", writeCounts);
+		printf("ReadCounts = %llu\n", readCounts);
+		printf("BwriteCounts = %llu\n", bwriteCounts);
+		printf("BreadCounts = %llu\n", breadCounts);
+		printf("EraseCounts = %llu\n", eraseCounts);
 	}
 	break;
 
