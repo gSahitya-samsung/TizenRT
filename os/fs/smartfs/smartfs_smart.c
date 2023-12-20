@@ -535,8 +535,11 @@ static ssize_t smartfs_read(FAR struct file *filep, char *buffer, size_t buflen)
 		}
 
 		/* Read the curent sector into our buffer */
-
+#ifdef CONFIG_SMARTFS_DYNAMIC_HEADER
 		smartfs_setbuffer(&readwrite, sf->currsector, 0, fs->fs_llformat.availbytes, (uint8_t *)fs->fs_rwbuffer);
+#else
+		smartfs_setbuffer(&readwrite, sf->currsector, 0, sizeof(struct smartfs_chain_header_s), (uint8_t *)fs->fs_rwbuffer);
+#endif
 		ret = FS_IOCTL(fs, BIOC_READSECT, (unsigned long)&readwrite);
 		if (ret < 0) {
 			fdbg("Error reading sector %d data, ret : %d\n", readwrite.logsector, ret);
@@ -544,7 +547,6 @@ static ssize_t smartfs_read(FAR struct file *filep, char *buffer, size_t buflen)
 		}
 
 		/* Point header to the read data to get used byte count */
-
 		header = (struct smartfs_chain_header_s *)fs->fs_rwbuffer;
 
 		/* Get number of used bytes in this sector */
@@ -571,9 +573,21 @@ static ssize_t smartfs_read(FAR struct file *filep, char *buffer, size_t buflen)
 		/* Copy data to the read buffer */
 
 		if (bytestoread > 0) {
+#ifdef CONFIG_SMARTFS_DYNAMIC_HEADER
 			/* Do incremental copy from this sector */
-
 			memcpy(&buffer[bytesread], &fs->fs_rwbuffer[sf->curroffset], bytestoread);
+#else
+			/* Read the sector data into our buffer */
+			smartfs_setbuffer(&readwrite, sf->currsector, sf->curroffset, bytestoread, (uint8_t *) &fs->fs_rwbuffer[sizeof(struct smartfs_chain_header_s)]);
+			ret = FS_IOCTL(fs, BIOC_READSECT, (unsigned long)&readwrite);
+			if (ret < 0) {
+				fdbg("Error reading sector %d data, ret : %d\n", readwrite.logsector, ret);
+				goto errout_with_semaphore;
+			}
+			/* Do incremental copy from this sector */
+			memcpy(&buffer[bytesread], &fs->fs_rwbuffer[sizeof(struct smartfs_chain_header_s)], bytestoread);
+#endif
+
 			bytesread += bytestoread;
 			sf->filepos += bytestoread;
 			sf->curroffset += bytestoread;
