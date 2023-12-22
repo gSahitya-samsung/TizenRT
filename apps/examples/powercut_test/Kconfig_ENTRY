@@ -1,0 +1,3 @@
+config ENTRY_POWERCUT_TEST
+	bool "\"Powercut test!\" example"
+	depends on EXAMPLES_POWERCUT_TEST

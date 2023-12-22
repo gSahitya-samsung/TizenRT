@@ -1,0 +1,14 @@
+#
+# For a description of the syntax of this configuration file,
+# see kconfig-language at https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt
+#
+
+config EXAMPLES_POWERCUT_TEST
+	bool "\"Powercut Test!\" example"
+	default n
+	---help---
+		Enable the \"Powercut Test!\" example
+
+config USER_ENTRYPOINT
+	string
+	default "powercut_main" if ENTRY_POWERCUT_TEST
