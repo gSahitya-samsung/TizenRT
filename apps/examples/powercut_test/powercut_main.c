@@ -69,8 +69,8 @@
 
 #define ROOT 						"/mnt/"
 #define TEST_FILE 					ROOT "sample_file"
-#define SIZE_1 						5000
-#define SIZE_2 						2500
+#define SIZE_1 						20000
+#define SIZE_2 						30000
 
 /****************************************************************************
  * powercut_main
@@ -87,9 +87,9 @@ int initialize(char** data_source_1, char** data_source_2, char** data_source_3)
 		ret = -1;
 		goto errout;
 	}
-	memset(*data_source_1, '1', SIZE_1*sizeof(char));
-	memset(*data_source_2, '2', SIZE_1*sizeof(char));
-	memset(*data_source_3, '3', SIZE_2*sizeof(char));
+	memset(*data_source_1, '1', SIZE_1 * sizeof(char));
+	memset(*data_source_2, '2', SIZE_1 * sizeof(char));
+	memset(*data_source_3, '3', SIZE_2 * sizeof(char));
 	errout:
 		return ret;
 }
@@ -104,21 +104,51 @@ int operation_recovery(char* data_source_1, char* data_source_2, int* op_no)
 	// check if file present
 	ret = stat(TEST_FILE, &file_status);
     if (ret < 0) {
-		if(ret == -ENOENT) {
+		if(errno == ENOENT) {
 			*op_no = 1;
 			printf("File Not Present\n");
+			ret = OK;
+		}
+		else{
+			printf("Some Error\n");
 		}
         goto errout;
     }
 	// get length of the file
 	file_size = file_status.st_size;
 	if(file_size < SIZE_1) {
-		printf("partially created file\n");
+		fd = open(TEST_FILE, O_RDWR);
+		if(fd < 0) {
+			ret = fd;
+			goto errout;
+		}
+		buffer = (char *) malloc(sizeof(char) + 1);
+		if(buffer == NULL) {
+			ret = -1;
+			goto errout;
+		}
+		ret = read(fd, buffer, 1);
+		if (ret < 0) {
+			goto errout;
+		}
+		if(buffer[0]=='4'){
+			printf("partially deleted file\n");
+		}
+		else if(buffer[0]=='1'){
+			printf("partially created file\n");
+		}
+		else{
+			printf("partially created file with first character = %c\n", buffer[0]);
+		}
 		*op_no = 4;
 		goto errout;
 	}
 	else if(file_size == SIZE_1) {
 		fd = open(TEST_FILE, O_RDWR);
+		if(fd < 0) {
+			ret = fd;
+			goto errout;
+		}
 		buffer = (char *) malloc(sizeof(char) + 1);
 		if(buffer == NULL) {
 			ret = -1;
@@ -129,10 +159,12 @@ int operation_recovery(char* data_source_1, char* data_source_2, int* op_no)
 			goto errout;
 		}
 		if (buffer[0] == '1') {
+			printf("Overwrite Case with 1 as first character\n");
 			*op_no = 2;
 			goto errout;
 		}
-		else if(buffer[1] == '2') {
+		else if(buffer[0] == '2') {
+			printf("Overwrite Case with 2 as first character\n");
 			free(buffer);
 			buffer = (char *) malloc(file_size * sizeof(char) + 1);
 			if(buffer == NULL) {
@@ -160,14 +192,23 @@ int operation_recovery(char* data_source_1, char* data_source_2, int* op_no)
 					goto errout;
 				}
 			}
+			else {
+				printf("No partial overwrite\n");
+			}
+		}
+		else{
+			printf("Overwrite Case with first character as %c\n", buffer[0]);
 		}
 		*op_no = 3;
 		goto errout;
 	}
 	else if(file_size > SIZE_1 && file_size < (SIZE_1 + SIZE_2)) {
 		printf("partially appended file\n");
-		*op_no = 4;
 	}
+	else{
+		printf("Normal appended file\n");
+	}
+	*op_no = 4;
 	errout:
 		if(fd >= 0) {
 			close(fd);
@@ -182,7 +223,7 @@ int operation_loop(int* op_no, char* data_source_1, char* data_source_2, char* d
 {
 	int fd = -1;
 	int ret = 0;
-	char buffer[2];
+	// char buffer[2];
 	
 	switch (*op_no)
 	{
@@ -198,45 +239,57 @@ int operation_loop(int* op_no, char* data_source_1, char* data_source_2, char* d
 		if (ret != SIZE_1) {
 			goto errout;
 		}
-		*op_no=2;
 		printf("Ending Create\n");
+		*op_no=2;
 		break;
 	// if file is already there in FS then overwrite it with data_source_2
 	case 2:
-		printf("Starting Overwrite\n");
 		fd = open(TEST_FILE, O_RDWR);
 		if(fd < 0) {
 			ret = fd;
 			goto errout;
 		}
+		printf("Starting Overwrite\n");
 		ret = write(fd, data_source_2, SIZE_1);
 		if (ret != SIZE_1) {
 			goto errout;
 		}
-		*op_no = 3;
 		printf("Ending Overwrite\n");
+		*op_no = 3;
 		break;
 	//  Apped the file with data_source_3
 	case 3:
-		printf("Starting Append\n");
-		fd = open(TEST_FILE, O_APPEND);
+		fd = open(TEST_FILE, O_APPEND | O_RDWR);
 		if(fd < 0) {
 			ret = fd;
 			goto errout;
 		}
+		printf("Starting Append\n");
 		ret = write(fd, data_source_3, SIZE_2);
 		if (ret != SIZE_2) {
 			goto errout;
 		}
-		*op_no = 4;
 		printf("Ending Append\n");
+		*op_no = 4;
 		break;
 	// delete partially created or appended file
 	case 4:
+		fd = open(TEST_FILE, O_RDWR);
+		if(fd < 0) {
+			ret = fd;
+			goto errout;
+		}
+		ret = write(fd, "4", 1);
+		if (ret != 1) {
+			goto errout;
+		}
+		printf("Written character 4\n");
+		close(fd);
+		fd = -1;
 		printf("Starting Delete\n");
 		unlink(TEST_FILE);
-		*op_no = 1;
 		printf("Ending Delete\n");
+		*op_no = 1;
 		break;
 	default:
 		break;
@@ -258,24 +311,24 @@ int powercut_main(int argc, char *argv[])
 	char* data_source_2 = NULL;
 	char* data_source_3 = NULL;
 	int ret = 0;
-	int op_no = 0;
+	int op_no = 4;
 	// initialize sources
 	ret = initialize(&data_source_1, &data_source_2, &data_source_3);
-	if (ret<0) {
-		printf("Error Allocating Sources, errno: %d\n", ret);
+	if (ret < 0) {
+		printf("Error Allocating Sources, errno: %d\n", errno);
 		goto errout;
 	}
 	// perform recovery
 	ret = operation_recovery(data_source_1, data_source_2, &op_no);
 	if (ret < 0) {
-		printf("Error on Operation recovery, errno: %d\n", ret);
+		printf("Error on Operation recovery, errno: %d\n", errno);
 		goto errout;
 	}
 	// perform operation loop
 	while (true) {
 		ret = operation_loop(&op_no, data_source_1, data_source_2, data_source_3);
 		if(ret < 0) {
-			printf("Error on Operation Loop, errno: %d\n", ret);
+			printf("Error on Operation Loop, errno: %d\n", errno);
 			break;
 		}
 	}	
