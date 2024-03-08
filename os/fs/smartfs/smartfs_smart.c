@@ -828,6 +828,11 @@ static off_t smartfs_seek(FAR struct file *filep, off_t offset, int whence)
 static int smartfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
 	/* We don't use any ioctls */
+	struct smartfs_mountpt_s *fs;
+
+
+	fs = filep->f_inode->i_private;
+	FS_IOCTL(fs, BIOC_TIME_SCAN, 0);
 
 	return -ENOSYS;
 }

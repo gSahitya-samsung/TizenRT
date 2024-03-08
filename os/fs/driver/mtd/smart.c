@@ -57,6 +57,7 @@
  ****************************************************************************/
 
 #include <tinyara/config.h>
+#include <tinyara/timer.h>
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -86,6 +87,8 @@
 #define UINT8TOUINT16(UINT8ARRAY)                       ((uint16_t)(((uint16_t)UINT8ARRAY[1] << 8) & 0xFF00) | UINT8ARRAY[0])
 
 //#define CONFIG_SMART_LOCAL_CHECKFREE
+
+#define O_RDONLY	     00
 
 #define SMART_STATUS_COMMITTED    0x80
 #define SMART_STATUS_RELEASED     0x40
@@ -1819,6 +1822,83 @@ static int smart_set_wear_level(FAR struct smart_struct_s *dev, uint16_t block, 
 	return 0;
 }
 #endif
+
+static int smart_fs_scan_with_timer(FAR struct smart_struct_s *dev)
+{
+	int sector;
+	int ret = OK;
+	int i, itr;
+	int frt_fd;
+	uint16_t totalsectors;
+	struct smart_sect_header_s header;
+	char eraseBits;
+	struct timer_status_s start, end;
+	unsigned int long long totalTime, itrTime;
+	int commited, released, erased;
+	commited = 0;
+	released = 0;
+	erased = 0;
+
+
+	frt_fd = open("/dev/timer0", O_RDONLY);
+	ioctl(frt_fd, TCIOC_SETMODE, MODE_FREERUN);
+
+	eraseBits = 0xff;
+	
+	totalsectors = dev->totalsectors;
+
+	for(itr = 1; itr<=10; itr++) {
+		ioctl(frt_fd, TCIOC_START, TRUE);
+		ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&start);
+		for (sector = 0; sector < totalsectors; sector++) {
+			ret = MTD_BREAD(dev->mtd, sector * dev->mtdBlksPerSector, dev->mtdBlksPerSector, (FAR uint8_t *) dev->rwbuffer);
+			if (ret != dev->mtdBlksPerSector) {
+				printf("Error reading physical sector %d.\n", sector);
+				goto err_out;
+			}
+			memcpy(&header, dev->rwbuffer, sizeof(struct smart_sect_header_s));
+
+			if(SECTOR_IS_COMMITTED(header)) {
+				commited++;
+				ret = smart_validate_crc(dev);
+
+				if(ret!=OK) {
+					// printf("CRC Not Matched For Commited Sectors\n");
+				}
+			}
+			else if(SECTOR_IS_RELEASED(header)) {
+				released++;
+				ret = smart_validate_crc(dev);
+
+				if(ret!=OK) {
+					// printf("CRC Not Matched For Released Sectors\n");
+				}
+			}
+			else {
+				erased++;
+				for(i = 0; i < dev->mtdBlksPerSector * 256; i++) {
+					if(dev->rwbuffer[i] != eraseBits) {
+						break;
+					}
+				}
+				if(i != dev->mtdBlksPerSector * 256) {
+					// printf("Erase State Verification Failed\n");
+				}
+			}
+		}
+		ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&end);
+		ioctl(frt_fd, TCIOC_STOP, 0);
+		itrTime =  end.timeleft - start.timeleft;
+		totalTime += itrTime;
+		printf("Time taken for iteration %d: %llu microseconds\n", itr, itrTime);
+	}
+
+	printf("Average test time: %llu microseconds\n", totalTime / (itr-1));
+
+	err_out:
+		close(frt_fd);
+		return ret;
+}
 
 /****************************************************************************
  * Name: smart_scan
@@ -4812,6 +4892,8 @@ static int smart_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
 	 */
 
 	switch (cmd) {
+	case BIOC_TIME_SCAN:
+		smart_fs_scan_with_timer(dev);
 	case BIOC_XIPBASE:
 		/* The argument accompanying the BIOC_XIPBASE should be non-NULL.  If
 		 * DEBUG is enabled, we will catch it here instead of in the MTD

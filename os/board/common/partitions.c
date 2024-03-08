@@ -20,6 +20,8 @@
  ****************************************************************************/
 
 #include <tinyara/config.h>
+#include <tinyara/timer.h>
+#define O_RDONLY	     00
 
 #undef  CONFIG_DEBUG
 #undef  CONFIG_DEBUG_ERROR
@@ -348,6 +350,15 @@ void automount_fs_partition(partition_info_t *partinfo)
 #ifdef CONFIG_SMARTFS_MULTI_ROOT_DIRS
 	ret = mksmartfs(fs_devname, 1, false);
 #else
+	struct timer_status_s start, end;
+	unsigned int long long itrTime;
+	int frt_fd = -1;
+	int a = -1;
+	frt_fd = open("/dev/timer0", O_RDONLY);
+	printf("FRT_FD: %d\n", frt_fd);
+	a = ioctl(frt_fd, TCIOC_SETMODE, MODE_FREERUN);
+	a = ioctl(frt_fd, TCIOC_START, TRUE);
+	a = ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&start);
 	ret = mksmartfs(fs_devname, false);
 #endif
 	if (ret != OK) {
@@ -360,6 +371,11 @@ void automount_fs_partition(partition_info_t *partinfo)
 			printf("%s is mounted successfully @ %s \n", fs_devname, "/mnt");
 		}
 	}
+	a = ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&end);
+    a = ioctl(frt_fd, TCIOC_STOP, 0);
+    itrTime =  end.timeleft - start.timeleft;
+    printf("Time taken for FS BOOT: %llu microseconds\n", itrTime);
+    close(frt_fd);
 #endif
 
 #ifdef CONFIG_AUTOMOUNT_ROMFS

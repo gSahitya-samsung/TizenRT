@@ -675,11 +675,6 @@ void os_start(void)
 		wd_initialize();
 	}
 
-#if CONFIG_NFILE_DESCRIPTORS > 0
-	/* Initialize the file system (needed to support device drivers) */
-
-	fs_initialize();
-#endif
 
 	/* Initialize the POSIX timer facility (if included in the link) */
 
@@ -696,6 +691,11 @@ void os_start(void)
 	{
 		timer_initialize();
 	}
+#endif
+#if CONFIG_NFILE_DESCRIPTORS > 0
+	/* Initialize the file system (needed to support device drivers) */
+
+	fs_initialize();
 #endif
 
 #ifndef CONFIG_DISABLE_SIGNALS

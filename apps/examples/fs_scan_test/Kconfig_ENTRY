@@ -1,0 +1,3 @@
+config ENTRY_SCAN_TEST
+	bool "\"FS SCAN TEST\" example"
+	depends on EXAMPLES_SCAN_TEST

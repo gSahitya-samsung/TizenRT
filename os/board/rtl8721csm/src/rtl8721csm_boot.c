@@ -309,6 +309,14 @@ void board_initialize(void)
 	shell_init_rom(0, 0);
 	//shell_init_ram();
 	ipc_table_init();
+#ifdef CONFIG_TIMER
+	int i;
+	char path[CONFIG_PATH_MAX];
+	for (i = 0; i < GTIMER_MAX; i++) {
+		snprintf(path, sizeof(path), "/dev/timer%d", i);
+		amebad_timer_initialize(path, i);
+	}
+#endif
 #ifdef CONFIG_FTL_ENABLED
 	app_ftl_init();
 #endif
@@ -319,14 +327,6 @@ void board_initialize(void)
 	board_i2s_initialize();
 #ifdef CONFIG_WATCHDOG
 	amebad_wdg_initialize(CONFIG_WATCHDOG_DEVPATH, 5000);
-#endif
-#ifdef CONFIG_TIMER
-	int i;
-	char path[CONFIG_PATH_MAX];
-	for (i = 0; i < GTIMER_MAX; i++) {
-		snprintf(path, sizeof(path), "/dev/timer%d", i);
-		amebad_timer_initialize(path, i);
-	}
 #endif
 
 #ifdef CONFIG_RTC_DRIVER

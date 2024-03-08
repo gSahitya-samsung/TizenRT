@@ -264,6 +264,7 @@
 										 *      the block with specific debug
 										 *      command and data.
 										 * OUT: None.  */
+#define BIOC_TIME_SCAN _BIOC(0x000E)
 
 /* TinyAra MTD driver ioctl definitions ***************************************/
 

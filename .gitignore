@@ -30,3 +30,5 @@ tags
 *.tmp.*
 *.log
 *.log.old
+*.project
+*.cproject
