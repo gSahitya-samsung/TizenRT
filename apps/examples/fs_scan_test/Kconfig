@@ -1,0 +1,14 @@
+#
+# For a description of the syntax of this configuration file,
+# see kconfig-language at https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt
+#
+
+config EXAMPLES_SCAN_TEST
+	bool "\"FS SCAN TEST\" example"
+	default n
+	---help---
+		Enable the \"FS SCAN TEST\" example
+
+config USER_ENTRYPOINT
+	string
+	default "fs_scan_main" if ENTRY_SCAN_TEST

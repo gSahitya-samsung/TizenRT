@@ -57,6 +57,7 @@
  ****************************************************************************/
 
 #include <tinyara/config.h>
+#include <tinyara/timer.h>
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -1819,6 +1820,64 @@ static int smart_set_wear_level(FAR struct smart_struct_s *dev, uint16_t block, 
 	return 0;
 }
 #endif
+
+static int smart_fs_scan_with_timer(FAR struct smart_struct_s *dev)
+{
+	int sector;
+	int ret = OK;
+	int i;
+	int frt_fd;
+	uint16_t totalsectors;
+	struct smart_sect_header_s header;
+	char eraseBits;
+	struct timer_status_s start, end;
+	unsigned int long long totalTime, itrTime;
+
+	frt_fd = open("/dev/timer0", O_RDONLY);
+	ioctl(frt_fd, TCIOC_SETMODE, MODE_FREERUN);
+
+	eraseBits = 0xff;
+	
+
+	totalsectors = dev->totalsectors;
+
+	printf("Totalsectors: %d\n", totalsectors);
+
+	ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&start);
+	for (sector = 0; sector < totalsectors; sector++) {
+		ret = MTD_BREAD(dev->mtd, sector * dev->mtdBlksPerSector, dev->mtdBlksPerSector, (uint8_t) dev->rwbuffer);
+		if (ret != dev->mtdBlksPerSector) {
+			printf("Error reading physical sector %d.\n", sector);
+			goto err_out;
+		}
+		memcpy(&header, dev->rwbuffer, sizeof(struct smart_sect_header_s));
+
+		if(SECTOR_IS_COMMITTED(header) || SECTOR_IS_RELEASED(header)) {
+			ret = smart_validate_crc(dev);
+
+			if(ret!=OK) {
+				printf("CRC Not Matched\n");
+			}
+		}
+		else {
+			for(i = 0; i < dev->mtdBlksPerSector * 256; i++) {
+				if(dev->rwbuffer[i] != eraseBits) {
+					break;
+				}
+			}
+			if(i != dev->mtdBlksPerSector * 256) {
+				printf("Erase State Verification Failes\n");
+				ret = -1;
+				goto err_out;
+			}
+		}
+	}
+	ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&end);
+	itrTime =  end.timeleft - start.timeleft;
+	printf("Time taken: %llu microseconds\n", itrTime);
+	err_out:
+		return ret;
+}
 
 /****************************************************************************
  * Name: smart_scan
@@ -4813,6 +4872,8 @@ static int smart_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
 	 */
 
 	switch (cmd) {
+	case BIOC_TIME_SCAN:
+		smart_fs_scan_with_timer(dev);
 	case BIOC_XIPBASE:
 		/* The argument accompanying the BIOC_XIPBASE should be non-NULL.  If
 		 * DEBUG is enabled, we will catch it here instead of in the MTD
