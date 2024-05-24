@@ -94,13 +94,10 @@ int up_pmsleep(void)
 
   flags = irqsave();
   sched_lock();
-  for (index = PM_NORMAL; index < PM_SLEEP; index++)
+  if (pm_staycount(PM_IDLE_DOMAIN))
     {
-      if (pm_staycount(PM_IDLE_DOMAIN, index))
-        {
-          ret = -EAGAIN;
-          goto errout_lock;
-        }
+      ret = -EAGAIN;
+      goto errout_lock;
     }
   ret = pm_changestate(0, PM_SLEEP);
   if (ret < 0)

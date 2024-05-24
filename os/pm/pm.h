@@ -169,7 +169,7 @@ struct pm_domain_s {
 
 	/* The power state lock count */
 
-	uint16_t stay[PM_COUNT];
+	uint16_t stay_count;
 
 	/* Timer to decrease state */
 

@@ -96,12 +96,12 @@ static int pm_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 	/* Handle built-in ioctl commands */
 	switch (cmd) {
     	case PMIOC_SUSPEND:
-	        pm_stay(PM_IDLE_DOMAIN, (enum pm_state_e)arg);
+	        pm_stay(PM_IDLE_DOMAIN);
 		pmvdbg("State locked!\n");
 		ret = OK;
         	break;
         case PMIOC_RESUME:
-		pm_relax(PM_IDLE_DOMAIN, (enum pm_state_e)arg);
+			pm_relax(PM_IDLE_DOMAIN);
 		pmvdbg("State unlocked!\n");
 		ret = OK;
 		break;

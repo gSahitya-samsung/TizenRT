@@ -149,11 +149,8 @@ enum pm_state_e pm_checkstate(int domain)
 
 	/* Consider the possible power state lock here */
 
-	for (index = 0; index < pdom->recommended; index++) {
-		if (pdom->stay[index] != 0) {
-			pdom->recommended = index;
-			break;
-		}
+	if (pdom->stay_count != 0) {
+		pdom->recommended = pdom->state;
 	}
 
 	leave_critical_section(flags);

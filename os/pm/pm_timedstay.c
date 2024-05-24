@@ -78,11 +78,11 @@ static WDOG_ID pid_timer_map[CONFIG_MAX_TASKS];
  * Private Functions
  ************************************************************************/
 
-static void timer_timeout(int argc, uint32_t state, uint32_t pid)
+static void timer_timeout(int argc, uint32_t pid)
 {
 	/* PM transition will be relaxed here */
 	if (pid_timer_map[pid] != NULL) {
-		pm_relax(PM_IDLE_DOMAIN, (enum pm_state_e)state);
+		pm_relax(PM_IDLE_DOMAIN);
 		wd_delete(pid_timer_map[pid]);
         	pid_timer_map[pid] = NULL;
 	}
@@ -123,7 +123,7 @@ int pm_timedstay(enum pm_state_e state, unsigned int timer_interval)
 	pid_timer_map[pid] = wdog;
 
 	/* Lock the pm transition and Start the wdog timer */
-	pm_stay(PM_IDLE_DOMAIN, state);
+	pm_stay(PM_IDLE_DOMAIN);
 	int ret = wd_start(wdog, timer_interval, (wdentry_t)timer_timeout, 2, (uint32_t)state, (uint32_t)pid);
 	pmvdbg("PM is locked for pid %d and timer started for %d milisecond\n", pid, timer_interval);
 

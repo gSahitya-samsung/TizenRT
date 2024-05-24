@@ -251,8 +251,17 @@
  
 /* This enumeration provides all power management domains */
 enum pm_domain_e {
-	PM_IDLE_DOMAIN = 0,
-	PM_NDOMAINS = CONFIG_PM_NDOMAINS,
+	PM_IDLE_DOMAIN 		= 	0,
+	PM_LCD_DOMAIN 		= 	1,
+	PM_UART_DOMAIN 		= 	2,
+	PM_WIFI_DOMAIN 		= 	3,
+	PM_BLE_DOMAIN 		= 	4,
+	PM_TASH_DOMAIN 		= 	14,
+	PM_APP_DOMAIN 		= 	15,
+	PM_PRODUCT_DOMAIN 	= 	16,
+	PM_OCF_DOMAIN 		= 	17,
+	PM_HASS_DOMAIN 		= 	18,
+	PM_NDOMAINS 		= 	CONFIG_PM_NDOMAINS,
 };
 
 /* This enumeration provides all power management states.  Receipt of the
@@ -502,7 +511,6 @@ void pm_activity(int domain, int priority);
  *
  * Input Parameters:
  *   domain - The domain of the PM activity
- *   state - The state want to stay.
  *
  *     As an example, media player might stay in normal state during playback.
  *
@@ -514,7 +522,7 @@ void pm_activity(int domain, int priority);
  *
  ****************************************************************************/
 
-void pm_stay(int domain, enum pm_state_e state);
+void pm_stay(int domain);
 
 /****************************************************************************
  * Name: pm_relax
@@ -525,7 +533,6 @@ void pm_stay(int domain, enum pm_state_e state);
  *
  * Input Parameters:
  *   domain - The domain of the PM activity
- *   state - The state want to relax.
  *
  *     As an example, media player might relax power level after playback.
  *
@@ -537,7 +544,7 @@ void pm_stay(int domain, enum pm_state_e state);
  *
  ****************************************************************************/
 
-void pm_relax(int domain, enum pm_state_e state);
+void pm_relax(int domain);
 
 /****************************************************************************
  * Name: pm_set_wakeup_timer
@@ -645,7 +652,6 @@ int pm_timedstay(enum pm_state_e state, unsigned int timer_interval);
  *
  * Input Parameters:
  *   domain - The domain of the PM activity
- *   state - The state want to relax.
  *
  * Returned Value:
  *   Current pm stay count
@@ -655,7 +661,7 @@ int pm_timedstay(enum pm_state_e state, unsigned int timer_interval);
  *
  ****************************************************************************/
 
-uint32_t pm_staycount(int domain, enum pm_state_e state);
+uint32_t pm_staycount(int domain);
 
 /****************************************************************************
  * Name: pm_checkstate
@@ -783,8 +789,8 @@ void pm_driver_register(void);
 #define pm_register(cb)			(0)
 #define pm_unregister(cb)		(0)
 #define pm_activity(domain,prio)
-#define pm_stay(domain,state)
-#define pm_relax(domain,state)
+#define pm_stay(domain)
+#define pm_relax(domain)
 #define pm_checkstate(domain)		(0)
 #define pm_changestate(domain, state)	(0)
 #define pm_querystate(domain)        (0)

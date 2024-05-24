@@ -189,7 +189,7 @@ void pm_activity(int domain, int priority)
  *
  ****************************************************************************/
 
-void pm_stay(int domain, enum pm_state_e state)
+void pm_stay(int domain)
 {
 	FAR struct pm_domain_s *pdom;
 	irqstate_t flags;
@@ -200,9 +200,8 @@ void pm_stay(int domain, enum pm_state_e state)
 	pdom = &g_pmglobals.domain[domain];
 
 	flags = enter_critical_section();
-	DEBUGASSERT(state < PM_COUNT);
-	DEBUGASSERT(pdom->stay[state] < UINT16_MAX);
-	pdom->stay[state]++;
+	DEBUGASSERT(pdom->stay_count < UINT16_MAX);
+	pdom->stay_count++;
 	leave_critical_section(flags);
 }
 
@@ -227,7 +226,7 @@ void pm_stay(int domain, enum pm_state_e state)
  *
  ****************************************************************************/
 
-void pm_relax(int domain, enum pm_state_e state)
+void pm_relax(int domain)
 {
 	FAR struct pm_domain_s *pdom;
 	irqstate_t flags;
@@ -238,9 +237,8 @@ void pm_relax(int domain, enum pm_state_e state)
 	pdom = &g_pmglobals.domain[domain];
 
 	flags = enter_critical_section();
-	DEBUGASSERT(state < PM_COUNT);
-	DEBUGASSERT(pdom->stay[state] > 0);
-	pdom->stay[state]--;
+	DEBUGASSERT(pdom->stay_count > 0);
+	pdom->stay_count--;
 	leave_critical_section(flags);
 }
 
@@ -262,7 +260,7 @@ void pm_relax(int domain, enum pm_state_e state)
  *
  ****************************************************************************/
 
-uint32_t pm_staycount(int domain, enum pm_state_e state)
+uint32_t pm_staycount(int domain)
 {
 	FAR struct pm_domain_s *pdom;
 
@@ -271,7 +269,7 @@ uint32_t pm_staycount(int domain, enum pm_state_e state)
 	DEBUGASSERT(domain >= 0 && domain < CONFIG_PM_NDOMAINS);
 	pdom = &g_pmglobals.domain[domain];
 
-	return pdom->stay[state];
+	return pdom->stay_count;
 }
 
 
