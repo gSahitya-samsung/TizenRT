@@ -54,6 +54,7 @@
 void pm_wakehandler(clock_t missing_tick)
 {
 	irqstate_t flags  = enter_critical_section();
+	int ret = -1;
 
 	pmllvdbg("missing_tick: %d\n", missing_tick);
 
@@ -63,6 +64,11 @@ void pm_wakehandler(clock_t missing_tick)
 		/* Check for the boundary case , in pm_timer_update(int ticks)
 	 	* but we pass unsigned int to it */
 		pm_timer_update(missing_tick);
+	}
+
+	ret = pm_changestate(PM_STANDBY);
+	if(ret != OK) {
+		g_pmglobals.state = PM_STANDBY;
 	}
 
 	leave_critical_section(flags);

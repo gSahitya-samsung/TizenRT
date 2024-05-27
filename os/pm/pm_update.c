@@ -138,7 +138,6 @@ static const uint16_t g_pmcount[3] = {
  *   update driver activity metrics and recommended states.
  *
  * Input Parameters:
- *   domain - The PM domain associated with the accumulator
  *   accum  - The value of the activity accumulator at the end of the time
  *            slice.
  *
@@ -152,9 +151,8 @@ static const uint16_t g_pmcount[3] = {
  *
  ****************************************************************************/
 
-void pm_update(int domain, int16_t accum)
+void pm_update(int16_t accum)
 {
-	FAR struct pm_domain_s *pdom;
 	int32_t Y;
 	int index;
 #if CONFIG_PM_MEMORY > 1
@@ -163,19 +161,15 @@ void pm_update(int domain, int16_t accum)
 	int j;
 #endif
 
-	/* Get a convenience pointer to minimize all of the indexing */
-
-	DEBUGASSERT(domain >= 0 && domain < CONFIG_PM_NDOMAINS);
-	pdom        = &g_pmglobals.domain[domain];
-
 #if CONFIG_PM_MEMORY > 1
 	/* We won't bother to do anything until we have accumulated
 	 * CONFIG_PM_MEMORY-1 samples.
 	 */
 
-	if (pdom->mcnt < CONFIG_PM_MEMORY - 1) {
-		index = pdom->mcnt++;
-		pdom->memory[index] = accum;
+	if (g_pmglobals.mcnt < CONFIG_PM_MEMORY - 1) {
+		index = g_pmglobals.mcnt;
+		g_pmglobals.mcnt += 1;
+		g_pmglobals.memory[index] = accum;
 		return;
 	}
 
@@ -197,12 +191,12 @@ void pm_update(int domain, int16_t accum)
 	 * with the new value).
 	 */
 
-	for (i = 0, j = pdom->mndx; i < CONFIG_PM_MEMORY - 1; i++, j++) {
+	for (i = 0, j = g_pmglobals.mndx; i < CONFIG_PM_MEMORY - 1; i++, j++) {
 		if (j >= CONFIG_PM_MEMORY - 1) {
 			j = 0;
 		}
 
-		Y += g_pmcoeffs[i] * pdom->memory[j];
+		Y += g_pmcoeffs[i] * g_pmglobals.memory[j];
 		denom += g_pmcoeffs[i];
 	}
 
@@ -210,10 +204,11 @@ void pm_update(int domain, int16_t accum)
 
 	Y /= denom;
 
-	index = pdom->mndx++;
-	pdom->memory[index] = Y;
-	if (pdom->mndx >= CONFIG_PM_MEMORY - 1) {
-		pdom->mndx = 0;
+	index = g_pmglobals.mndx;
+	g_pmglobals.mndx += 1;
+	g_pmglobals.memory[index] = Y;
+	if (g_pmglobals.mndx >= CONFIG_PM_MEMORY - 1) {
+		g_pmglobals.mndx = 0;
 	}
 #else
 
@@ -228,12 +223,12 @@ void pm_update(int domain, int16_t accum)
 	 * probably does apply for the IDLE state.
 	 */
 
-	if (pdom->state > PM_NORMAL) {
+	if (g_pmglobals.state > PM_NORMAL) {
 		/* Get the table index for the current state (which will be the
 		 * current state minus one)
 		 */
 
-		index = pdom->state - 1;
+		index = g_pmglobals.state - 1;
 
 		/* Has the threshold to return to normal power consumption state been
 		 * exceeded?
@@ -242,8 +237,8 @@ void pm_update(int domain, int16_t accum)
 		if (Y > g_pmexitthresh[index]) {
 			/* Yes... reset the count and recommend the normal state. */
 
-			pdom->btime       = clock_systimer();
-			pdom->recommended = PM_NORMAL;
+			g_pmglobals.btime       = clock_systimer();
+			g_pmglobals.recommended = PM_NORMAL;
 			return;
 		}
 	}
@@ -254,15 +249,15 @@ void pm_update(int domain, int16_t accum)
 	 * surprised to be executing!).
 	 */
 
-	if (pdom->state < PM_SLEEP) {
+	if (g_pmglobals.state < PM_SLEEP) {
 		unsigned int nextstate;
 
 		/* Get the next state and the table index for the next state (which will
 		 * be the current state)
 		 */
 
-		index     = pdom->state;
-		nextstate = pdom->state + 1;
+		index     = g_pmglobals.state;
+		nextstate = g_pmglobals.state + 1;
 
 		/* Has the threshold to enter the next lower power consumption state
 		 * been exceeded?
@@ -271,24 +266,24 @@ void pm_update(int domain, int16_t accum)
 		if (Y > g_pmenterthresh[index]) {
 			/* No... reset the count and recommend the current state */
 
-			pdom->btime       = clock_systimer();
-			pdom->recommended = pdom->state;
+			g_pmglobals.btime       = clock_systimer();
+			g_pmglobals.recommended = g_pmglobals.state;
 		}
 
 		/* Yes.. have we already recommended this state? If so, do nothing */
 
-		else if (pdom->recommended < nextstate) {
+		else if (g_pmglobals.recommended < nextstate) {
 			/* No.. calculate the count.  Has it passed the count required
 			 * for a state transition?
 			 */
 
-			if (clock_systimer() - pdom->btime >= g_pmcount[index] * TIME_SLICE_TICKS) {
+			if (clock_systimer() - g_pmglobals.btime >= g_pmcount[index] * TIME_SLICE_TICKS) {
 					/* Yes, recommend the new state and set up for the next
 					 * transition.
 					 */
 
-				pdom->btime       = clock_systimer();
-				pdom->recommended = nextstate;
+				g_pmglobals.btime       = clock_systimer();
+				g_pmglobals.recommended = nextstate;
 			}
 		}
 	}

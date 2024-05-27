@@ -92,24 +92,17 @@
  *   is completed.
  *
  * Input Parameters:
- *   domain - the PM domain to check
  *
  * Returned Value:
  *   The recommended power management state.
  *
  ****************************************************************************/
 
-enum pm_state_e pm_checkstate(int domain)
+enum pm_state_e pm_checkstate(void)
 {
-	FAR struct pm_domain_s *pdom;
 	clock_t now;
 	irqstate_t flags;
 	int index;
-
-	/* Get a convenience pointer to minimize all of the indexing */
-
-	DEBUGASSERT(domain >= 0 && domain < CONFIG_PM_NDOMAINS);
-	pdom = &g_pmglobals.domain[domain];
 
 	/* Check for the end of the current time slice.  This must be performed
 	 * with interrupts disabled so that it does not conflict with the similar
@@ -127,7 +120,7 @@ enum pm_state_e pm_checkstate(int domain)
 	 */
 
 	now = clock_systimer();
-	if (now - pdom->stime >= TIME_SLICE_TICKS) {
+	if (now - g_pmglobals.stime >= TIME_SLICE_TICKS) {
 		int16_t accum;
 
 		/* Sample the count, reset the time and count, and assess the PM
@@ -135,29 +128,29 @@ enum pm_state_e pm_checkstate(int domain)
 		 * still disabled.
 		 */
 
-		accum       = pdom->accum;
-		pdom->stime = now;
-		pdom->accum = 0;
+		accum       = g_pmglobals.accum;
+		g_pmglobals.stime = now;
+		g_pmglobals.accum = 0;
 
 		/* Reassessing the PM state may require some computation.  However,
 		 * the work will actually be performed on a worker thread at a user-
 		 * controlled priority.
 		 */
 
-		(void)pm_update(domain, accum);
+		(void)pm_update(accum);
 	}
 
 	/* Consider the possible power state lock here */
 
-	for (index = 0; index < pdom->recommended; index++) {
-		if (pdom->stay[index] != 0) {
-			pdom->recommended = index;
+	for (index = 0; index < CONFIG_PM_NDOMAINS; index++) {
+		if (g_pmglobals.suspend_count[index] != 0) {
+			g_pmglobals.recommended = g_pmglobals.state;
 			break;
 		}
 	}
 
 	leave_critical_section(flags);
-	return pdom->recommended;
+	return g_pmglobals.recommended;
 }
 
 #endif							/* CONFIG_PM */

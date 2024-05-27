@@ -25,9 +25,9 @@
 
 #ifdef CONFIG_PM
 #include <tinyara/pm/pm.h>
-static void amebasmart_ble_pmnotify(FAR struct pm_callback_s *cb, int domain,
+static void amebasmart_ble_pmnotify(FAR struct pm_callback_s *cb,
 										enum pm_state_e pmstate);
-static int  amebasmart_ble_pmprepare(FAR struct pm_callback_s *cb, int domain,
+static int  amebasmart_ble_pmprepare(FAR struct pm_callback_s *cb,
 										enum pm_state_e pmstate);
 #endif
 
@@ -42,11 +42,6 @@ static void bt_power_suspend_callback(void)
 static void bt_power_resume_callback(void)
 {
 	pmvdbg("[BT_PS] BT is wake now\r\n");
-
-	/* Report BT activity to the power management logic */
-#if defined(CONFIG_PM) && CONFIG_RTL8730E_PM_BT_ACTIVITY > 0
-	pm_activity(PM_IDLE_DOMAIN, CONFIG_RTL8730E_PM_BT_ACTIVITY);
-#endif
 }
 
 extern int wifi_set_ips_internal(u8 enable);
@@ -161,7 +156,7 @@ static struct
  *
  ****************************************************************************/
 #ifdef CONFIG_PM
-static void amebasmart_ble_pmnotify(struct pm_callback_s *cb, int domain,
+static void amebasmart_ble_pmnotify(struct pm_callback_s *cb,
 				enum pm_state_e pmstate)
 {
 	switch (pmstate) {
@@ -215,7 +210,7 @@ static void amebasmart_ble_pmnotify(struct pm_callback_s *cb, int domain,
  ****************************************************************************/
 #ifdef CONFIG_PM
 extern uint8_t ble_client_connect_is_running;
-static int amebasmart_ble_pmprepare(struct pm_callback_s *cb, int domain,
+static int amebasmart_ble_pmprepare(struct pm_callback_s *cb,
 		enum pm_state_e pmstate)
 {
 	switch (pmstate) {

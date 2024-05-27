@@ -103,8 +103,6 @@ int stm32l4_tim2_handler(int irq, uint32_t *regs)
 	/* Clear interrupt pending */
 	__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_UPDATE);
 
-	pm_activity(0, STM32L4_TICKLESS_IDLE_ACTIVITY);
-
 	elapsed = next_intval;
 	next_intval = 0;
 

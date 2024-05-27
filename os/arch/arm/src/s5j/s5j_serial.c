@@ -281,11 +281,6 @@ static int up_interrupt(int irq, void *context, void *arg)
 	uart_dev_t *dev = (uart_dev_t *)arg;
 	uint32_t uintp = uart_getreg32(dev->priv, S5J_UART_UINTP_OFFSET);
 
-#if defined(CONFIG_PM) && CONFIG_PM_SERIAL_ACTIVITY > 0
-	/* Report serial activity to the power management logic */
-	pm_activity(PM_IDLE_DOMAIN, CONFIG_PM_SERIAL_ACTIVITY);
-#endif
-
 	if (uintp & UART_UINTP_TXD) {
 		uart_xmitchars(dev);
 	}
@@ -725,7 +720,7 @@ static bool up_txempty(struct uart_dev_s *dev)
  *   consumption state when it returned OK to the prepare() call.
  *
  ****************************************************************************/
-static void up_pm_notify(struct pm_callback_s *cb, int domain,
+static void up_pm_notify(struct pm_callback_s *cb,
 				enum pm_state_e pmstate)
 {
 	switch (pmstate) {
@@ -783,7 +778,7 @@ static void up_pm_notify(struct pm_callback_s *cb, int domain,
  *              consumption modes!
  *
  ****************************************************************************/
-static int up_pm_prepare(struct pm_callback_s *cb, int domain,
+static int up_pm_prepare(struct pm_callback_s *cb,
 		enum pm_state_e pmstate)
 {
 	/* Logic to prepare for a reduced power state goes here. */
