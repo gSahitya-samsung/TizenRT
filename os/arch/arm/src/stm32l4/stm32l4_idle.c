@@ -74,7 +74,6 @@
 #endif
 
 #define PM_IDLE_DOMAIN 0 /* Revisit */
-#define STM32L4_EXT_JOYKEY_ACTIVITY			4
 
 #ifdef CONFIG_SCHED_TICKSUPPRESS
 #ifndef CONFIG_STM32L4_RTC
@@ -88,21 +87,17 @@
 #ifdef CONFIG_ARCH_SUPPORT_ENTER_SLEEP
 int up_pmsleep(void)
 {
-  int index;
   int ret = OK;
   irqstate_t flags;
 
   flags = irqsave();
   sched_lock();
-  for (index = PM_NORMAL; index < PM_SLEEP; index++)
+  if (pm_staycount(PM_IDLE_DOMAIN))
     {
-      if (pm_staycount(PM_IDLE_DOMAIN, index))
-        {
-          ret = -EAGAIN;
-          goto errout_lock;
-        }
+      ret = -EAGAIN;
+      goto errout_lock;
     }
-  ret = pm_changestate(0, PM_SLEEP);
+  ret = pm_changestate(PM_SLEEP);
   if (ret < 0)
     {
       goto errout;
@@ -112,7 +107,7 @@ int up_pmsleep(void)
 
   stm32l4_clockenable();
 errout:
-  pm_changestate(0, PM_NORMAL);
+  pm_changestate(PM_NORMAL);
 errout_lock:
   sched_unlock();
   irqrestore(flags);
@@ -128,7 +123,6 @@ void up_extiisr(int irq, uint32_t *regs)
 {
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_13);
   up_lowputc('i');
-  pm_activity(PM_IDLE_DOMAIN, STM32L4_EXT_JOYKEY_ACTIVITY);
 }
 
 void set_exti_button(void)
@@ -170,7 +164,7 @@ static void up_idlepm(void)
 
   /* Decide, which power saving level can be obtained */
 
-  newstate = pm_checkstate(PM_IDLE_DOMAIN);
+  newstate = pm_checkstate();
 
   /* Check for state changes */
 
@@ -184,12 +178,12 @@ static void up_idlepm(void)
 
       /* Then force the global state change */
 
-      ret = pm_changestate(PM_IDLE_DOMAIN, newstate);
+      ret = pm_changestate(newstate);
       if (ret < 0)
         {
           /* The new state change failed, revert to the preceding state */
 
-          (void)pm_changestate(PM_IDLE_DOMAIN, oldstate);
+          (void)pm_changestate(oldstate);
         }
       else
         {
@@ -253,7 +247,7 @@ static void up_idlepm(void)
           /* Re configure clocks */
           stm32l4_clockenable();
 
-          ret = pm_changestate(PM_IDLE_DOMAIN, PM_NORMAL);
+          ret = pm_changestate(PM_NORMAL);
           if (ret < 0)
             {
               oldstate = PM_NORMAL;

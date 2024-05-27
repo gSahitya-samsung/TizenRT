@@ -177,9 +177,6 @@
 
 /* Power management definitions */
 
-#if defined(CONFIG_PM) && !defined(CONFIG_STM32L4_PM_SERIAL_ACTIVITY)
-#  define CONFIG_STM32L4_PM_SERIAL_ACTIVITY  10
-#endif
 #if defined(CONFIG_PM)
 #  define PM_IDLE_DOMAIN             0 /* Revisit */
 #endif
@@ -334,9 +331,9 @@ static void stm32l4serial_dmarxcallback(DMA_HANDLE handle, uint8_t status,
 #ifdef CONFIG_PM
 static void stm32l4serial_setsuspend(struct uart_dev_s *dev, bool suspend);
 static void stm32l4serial_pm_setsuspend(bool suspend);
-static void stm32l4serial_pmnotify(FAR struct pm_callback_s *cb, int domain,
+static void stm32l4serial_pmnotify(FAR struct pm_callback_s *cb,
                                    enum pm_state_e pmstate);
-static int  stm32l4serial_pmprepare(FAR struct pm_callback_s *cb, int domain,
+static int  stm32l4serial_pmprepare(FAR struct pm_callback_s *cb,
                                     enum pm_state_e pmstate);
 #endif
 
@@ -1654,12 +1651,6 @@ static int up_interrupt(int irq, FAR void *context, FAR void *arg)
 
   DEBUGASSERT(priv != NULL);
 
-  /* Report serial activity to the power management logic */
-
-#if defined(CONFIG_PM) && CONFIG_STM32L4_PM_SERIAL_ACTIVITY > 0
-  pm_activity(PM_IDLE_DOMAIN, CONFIG_STM32L4_PM_SERIAL_ACTIVITY);
-#endif
-
   /* Loop until there are no characters to be transferred or,
    * until we have been looping for a long time.
    */
@@ -2689,7 +2680,7 @@ static void stm32l4serial_dmarxcallback(DMA_HANDLE handle, uint8_t status,
  ****************************************************************************/
 
 #ifdef CONFIG_PM
-static void stm32l4serial_pmnotify(FAR struct pm_callback_s *cb, int domain,
+static void stm32l4serial_pmnotify(FAR struct pm_callback_s *cb,
                                    enum pm_state_e pmstate)
 {
   struct stm32l4_serial_s *priv = g_uart_devs[CONSOLE_UART - 1];
@@ -2769,7 +2760,7 @@ static void stm32l4serial_pmnotify(FAR struct pm_callback_s *cb, int domain,
  ****************************************************************************/
 
 #ifdef CONFIG_PM
-static int stm32l4serial_pmprepare(FAR struct pm_callback_s *cb, int domain,
+static int stm32l4serial_pmprepare(FAR struct pm_callback_s *cb,
                                    enum pm_state_e pmstate)
 {
   int n;

@@ -332,10 +332,6 @@
 
 /* Power management definitions */
 
-#if defined(CONFIG_PM) && !defined(CONFIG_IMXRT_PM_SERIAL_ACTIVITY)
-#define CONFIG_IMXRT_PM_SERIAL_ACTIVITY 10
-#endif
-
 #if defined(CONFIG_PM)
 #define PM_IDLE_DOMAIN      0	/* Revisit */
 #endif
@@ -404,8 +400,8 @@ static bool imxrt_txready(struct uart_dev_s *dev);
 static bool imxrt_txempty(struct uart_dev_s *dev);
 
 #ifdef CONFIG_PM
-static void up_pm_notify(struct pm_callback_s *cb, int dowmin, enum pm_state_e pmstate);
-static int up_pm_prepare(struct pm_callback_s *cb, int domain, enum pm_state_e pmstate);
+static void up_pm_notify(struct pm_callback_s *cb, enum pm_state_e pmstate);
+static int up_pm_prepare(struct pm_callback_s *cb, enum pm_state_e pmstate);
 #endif
 
 /****************************************************************************
@@ -934,12 +930,6 @@ static int imxrt_interrupt(int irq, void *context, FAR void *arg)
 	DEBUGASSERT(dev != NULL && dev->priv != NULL);
 	priv = (struct imxrt_uart_s *)dev->priv;
 
-#if defined(CONFIG_PM) && CONFIG_IMXRT_PM_SERIAL_ACTIVITY > 0
-	/* Report serial activity to the power management logic */
-
-	pm_activity(PM_IDLE_DOMAIN, CONFIG_IMXRT_PM_SERIAL_ACTIVITY);
-#endif
-
 	/* Loop until there are no characters to be transferred or,
 	 * until we have been looping for a long time.
 	 */
@@ -1345,7 +1335,7 @@ static bool imxrt_txempty(struct uart_dev_s *dev)
  ****************************************************************************/
 
 #ifdef CONFIG_PM
-static void up_pm_notify(struct pm_callback_s *cb, int domain, enum pm_state_e pmstate)
+static void up_pm_notify(struct pm_callback_s *cb, enum pm_state_e pmstate)
 {
 	switch (pmstate) {
 	case (PM_NORMAL): {
@@ -1414,7 +1404,7 @@ static void up_pm_notify(struct pm_callback_s *cb, int domain, enum pm_state_e p
  ****************************************************************************/
 
 #ifdef CONFIG_PM
-static int up_pm_prepare(struct pm_callback_s *cb, int domain, enum pm_state_e pmstate)
+static int up_pm_prepare(struct pm_callback_s *cb, enum pm_state_e pmstate)
 {
 	/* Logic to prepare for a reduced power state goes here. */
 

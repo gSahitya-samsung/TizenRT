@@ -79,7 +79,7 @@ static void pm_timer_callback(pm_timer_t* timer)
 }
 
 /************************************************************************
- * Name: pm_msleep
+ * Name: pm_sleep
  *
  * Description:
  *   This function allows the board to sleep for given time interval.
@@ -99,10 +99,12 @@ static void pm_timer_callback(pm_timer_t* timer)
  *
  ************************************************************************/
 
-int pm_msleep(int timer_interval)
+int pm_sleep(int milliseconds)
 {
+        int timer_interval;
+
         /* Converting from milliseconds to ticks */
-	timer_interval = ((timer_interval * CLOCKS_PER_SEC) /  1000);
+	timer_interval = ((milliseconds * CLOCKS_PER_SEC) /  1000);
 
         pm_timer_t *timer = pm_timer_create();
         irqstate_t state;
