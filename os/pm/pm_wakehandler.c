@@ -55,6 +55,7 @@ void pm_wakehandler(clock_t missing_tick)
 {
 	irqstate_t flags  = enter_critical_section();
 	int ret = -1;
+	printf("inside pm_wakehandler\n");
 
 	pmllvdbg("missing_tick: %d\n", missing_tick);
 
@@ -70,6 +71,9 @@ void pm_wakehandler(clock_t missing_tick)
 	if(ret != OK) {
 		g_pmglobals.state = PM_STANDBY;
 	}
-
+	
+	printf("starting pm_timer\n");
+	pm_timer_start();
+	printf("leaving pm_wakehandler\n");
 	leave_critical_section(flags);
 }

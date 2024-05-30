@@ -61,9 +61,16 @@
 #include <debug.h>
 #include <tinyara/pm/pm.h>
 #include <tinyara/irq.h>
+#include <tinyara/lcd/lcd_dev.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
 
 #include "pm_metrics.h"
 #include "pm.h"
+
+#define LCD_DEV_PATH "/dev/lcd0"
+#define CONFIG_LCD_NORMAL_POWER 90
+#define CONFIG_LCD_IDLE_POWER 30
 
 #ifdef CONFIG_PM
 
@@ -214,6 +221,8 @@ int pm_changestate(enum pm_state_e newstate)
 {
 	irqstate_t flags;
 	int ret = -1;
+	int fd = -1;
+	unsigned long power = 0;
 
 	/* Disable interrupts throught this operation... changing driver states
 	 * could cause additional driver activity that might interfere with the
@@ -227,6 +236,37 @@ int pm_changestate(enum pm_state_e newstate)
 	 * drivers may refuse the state change.
 	 */
 	if (newstate != PM_RESTORE) {
+		if (newstate == g_pmglobals.state) {
+			ret = OK;
+			goto EXIT;
+		}
+
+		else if (newstate == PM_NORMAL || newstate == PM_IDLE || (g_pmglobals.state == PM_IDLE && newstate == PM_STANDBY)) {
+			printf("inside changestate\n");
+			// if(newstate == PM_NORMAL) {
+			// 	power = CONFIG_LCD_NORMAL_POWER;
+			// }
+			// else if(newstate == PM_IDLE) {
+			// 	power = CONFIG_LCD_IDLE_POWER;
+			// }
+			// else {
+			// 	power = 0;
+			// }
+			
+			// fd = open(LCD_DEV_PATH, O_RDWR | O_SYNC, 0666);
+			// if (fd < 0) {
+			// 	printf("ERROR: Failed to open lcd port : %s error:%d\n", LCD_DEV_PATH, fd);
+			// 	ret = -1;
+			// 	goto EXIT;
+			// }
+			// ret = ioctl(fd, LCDDEVIO_SETPOWER, power);
+			// close(fd);
+			ret = OK;
+			printf("change the state from %d to %d", g_pmglobals.state, newstate);
+			g_pmglobals.state = newstate;
+			goto EXIT;
+		}
+
 		ret = pm_prepall(newstate);
 		if (ret != OK) {
 			/* One or more drivers is not ready for this state change.  Revert to

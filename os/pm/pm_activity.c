@@ -106,6 +106,25 @@ void pm_suspend(enum pm_domain_e domain)
 	flags = enter_critical_section();
 	DEBUGASSERT(g_pmglobals.suspend_count[domain] < UINT16_MAX);
 	g_pmglobals.suspend_count[domain]++;
+
+	/* Check if LCD want to suspend, if so change pm state to normal 
+		and stop the state change timer.
+	*/
+	printf("inside pm_suspend\n");
+	printf("domain is %d\n", (int) domain);
+	if (domain == PM_LCD_DOMAIN) {
+		printf("reseting timer for LCD DOMAIN\n");
+		pm_timer_reset();
+		pm_changestate(PM_NORMAL);
+	}
+	/* If driver wants to suspend PM, then ensure current pm state should
+		be PM_STANDBY before reseting the timer
+	*/
+	else if (g_pmglobals.state == PM_STANDBY) {
+		printf("resting timer for other domain\n");
+		pm_timer_reset();
+	}
+	printf("leaving pm_suspend\n");
 	leave_critical_section(flags);
 }
 
@@ -132,6 +151,7 @@ void pm_suspend(enum pm_domain_e domain)
 void pm_resume(enum pm_domain_e domain)
 {
 	irqstate_t flags;
+	int index = -1;
 
 	/* Get a convenience pointer to minimize all of the indexing */
 
@@ -140,7 +160,25 @@ void pm_resume(enum pm_domain_e domain)
 	flags = enter_critical_section();
 	DEBUGASSERT(g_pmglobals.suspend_count[domain] > 0);
 	g_pmglobals.suspend_count[domain]--;
+	printf("inside pm_resume\n");
+	printf("domain is %d\n", (int) domain);
+
+	/* Before starting the state change timer, ensure that no domain wants
+		to remain in this state.
+	*/
+
+	
 	leave_critical_section(flags);
+	for (index = 0; index < CONFIG_PM_NDOMAINS; index++) {
+		if (g_pmglobals.suspend_count[index]) {
+			break;
+		}
+	}
+	if (index == CONFIG_PM_NDOMAINS) {
+		printf("starting timer\n");
+		pm_timer_start();
+	}
+	printf("leaving pm_resume\n");
 }
 
 /****************************************************************************

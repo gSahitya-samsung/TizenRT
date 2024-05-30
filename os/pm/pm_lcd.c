@@ -51,10 +51,11 @@
  * Included Files
  ************************************************************************/
 
+#include <tinyara/config.h>
 #include <tinyara/pm/pm.h>
 #include <tinyara/wdog.h>
 #include <tinyara/sched.h>
-#include "pm.h"
+#include <debug.h>
 
 #include <pm_timer/pm_timer.h>
 
@@ -70,68 +71,10 @@
  * Private Variables
  ************************************************************************/
 
-/* This array maps the pid to their respective wdog timer. 
- * Assumption: when a thread does a timed lock , only the same thread 
- * can unlock the "timed lock" before it expire */
-static WDOG_ID pid_timer_map[CONFIG_MAX_TASKS];
-
 /************************************************************************
  * Private Functions
  ************************************************************************/
 
-static void timer_timeout(int argc, uint32_t domain, uint32_t pid)
-{
-	/* PM transition will be relaxed here */
-	printf("CHAL GYA BHAI\n");
-	if (pid_timer_map[pid] != NULL) {
-		// pm_resume(domain);
-		wd_delete(pid_timer_map[pid]);
-        	pid_timer_map[pid] = NULL;
-	}
-}
-
-#define CONFIG_PM_LCD_NORMAL_TO_IDLE_THRESH 1000
-#define CONFIG_PM_LCD_IDLE_TO_STANDBY_THRESH 1000
-#define CONFIG_PM_STANDBY_TO_SLEEP_THRESH 1000
-
-#if defined(CONFIG_PM_LCD_NORMAL_TO_IDLE_THRESH) && defined(CONFIG_PM_LCD_IDLE_TO_STANDBY_THRESH) && defined(CONFIG_PM_STANDBY_TO_SLEEP_THRESH)
-static uint32_t pm_gettimeinterval(void) {
-
-    uint32_t ret = 0;
-    if (g_pmglobals.state == PM_NORMAL) {
-        ret = CONFIG_PM_LCD_NORMAL_TO_IDLE_THRESH;
-    }
-    else if (g_pmglobals.state == PM_IDLE) {
-        ret = CONFIG_PM_LCD_IDLE_TO_STANDBY_THRESH;
-    }
-    else if (g_pmglobals.state == PM_STANDBY) {
-        ret = CONFIG_PM_STANDBY_TO_SLEEP_THRESH;
-    }
-
-    DEBUGASSERT(ret!=0);
-    return ret;
-}
-#endif
-
-
-static void pm_routine(int argc, int a, int b) {
-	printf("inside pm_routine\n");
-    
-    enum pm_state_e nextstate = pm_getnextstate();
-
-	printf("Changing state for %d to %d\n", g_pmglobals.state, nextstate);
-    pm_changestate(nextstate);
-
-    if(nextstate != PM_SLEEP) {
-        if(!g_pmglobals.wdog) {
-			printf("Creating watch dog inside pm_routine\n");
-            g_pmglobals.wdog = wd_create();
-        }
-		printf("Starting watch dog inside pm_routine\n");
-        wd_start(g_pmglobals.wdog, pm_gettimeinterval(), (wdentry_t)pm_routine, 0);
-    }
-	printf("leaving pm_routine\n");
-}
 
 /************************************************************************
  * Public Functions
@@ -152,71 +95,3 @@ static void pm_routine(int argc, int a, int b) {
  *   -1 - error
  *
  ************************************************************************/
-
-int pm_timedsuspend(enum pm_domain_e domain, unsigned int timer_interval)
-{
-	int pid = PIDHASH(getpid());
-
-	/* Check if there is already a wdog lock timer running for 
-	 * the process */
-	if (pid_timer_map[pid] != NULL) {
-		printf("There is already a lock timer running for this process\n");
-		return PM_TIMER_FAIL;
-	}
-
-	WDOG_ID wdog = wd_create();
-	pid_timer_map[pid] = wdog;
-
-	/* Lock the pm transition and Start the wdog timer */
-	// pm_suspend(domain);
-	int ret = wd_start(wdog, timer_interval, (wdentry_t)timer_timeout, 2, (uint32_t)domain, (uint32_t)pid);
-	printf("PM is locked for pid %d and timer started for %d milisecond\n", pid, timer_interval);
-
-	if (ret != PM_TIMER_SUCCESS) {
-		printf("ERROR\n");
-		return PM_TIMER_FAIL;
-	}
-
-	return ret;
-}
-
-int pm_timer_reset(void)
-{
-
-	printf("inside pm_timer_reset\n");
-    int ret = OK;
-
-    if (g_pmglobals.wdog) {
-		printf("cancelling watch dog inside pm_timer_reset\n");
-        ret = wd_cancel(g_pmglobals.wdog);
-    }
-	printf("leaving pm_timer_reset\n");
-
-    return ret;
-}
-
-void fun(int argc, int a, int b) {
-	printf("I am here");
-}
-
-int pm_timer_start(void)
-{
-	printf("inside pm_timer_start\n");
-    int ret = -1;
-	int time = 3000;
-	WDOG_ID wdog = wd_create();
-
-    if (!g_pmglobals.wdog) {
-		printf("creating watch dog timer\n");
-        g_pmglobals.wdog = wd_create();
-    }
-
-	printf("starting watch dog timer with time %d\n", pm_gettimeinterval());
-    ret = wd_start(wdog, time, (wdentry_t)fun, 2, ret, ret);
-    if (ret != OK) {
-        pmvdbg("Unable to start timer to change state from %d\n", g_pmglobals.state);
-    }
-	printf("leaving pm_timer_start\n");
-
-    return ret;
-}

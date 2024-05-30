@@ -127,6 +127,8 @@ static int pm_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 #endif
 	default:
 		pmvdbg("Invalid command passed!\n");
+		// pm_timer_start();
+		pm_timedsuspend(PM_IDLE_DOMAIN, 1000);
 		break;
         }
         return ret;

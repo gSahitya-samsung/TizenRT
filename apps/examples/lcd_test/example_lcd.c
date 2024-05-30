@@ -68,7 +68,7 @@
 
 static int xres;
 static int yres;
-
+nm
 static void putarea(int x1, int x2, int y1, int y2, int color)
 {
 	struct lcddev_area_s area;
