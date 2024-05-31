@@ -103,6 +103,7 @@ int pm_suspend(enum pm_domain_e domain)
 	int ret = OK;
 
 	flags = enter_critical_section();
+	/* prevent board going to sleep */
 	if (domain < 0 || domain >= CONFIG_PM_NDOMAINS) {
 		ret = -1;
 		set_errno(EINVAL);
@@ -113,7 +114,22 @@ int pm_suspend(enum pm_domain_e domain)
 		set_errno(ERANGE);
 		goto errout;
 	}
+	up_board_sleep(false);
 	g_pmglobals.suspend_count[domain]++;
+
+	/* Check if LCD want to suspend, if so change pm state to normal 
+		and stop the state change timer.
+	*/
+	if (domain == PM_LCD_DOMAIN) {
+		pm_timer_reset();
+		pm_changestate(PM_NORMAL);
+	}
+	/* If driver wants to suspend PM, then ensure current pm state should
+		be PM_STANDBY before reseting the timer
+	*/
+	else if (g_pmglobals.state == PM_STANDBY) {
+		pm_timer_reset();
+	}
 errout:
 	leave_critical_section(flags);
 	return ret;
@@ -156,6 +172,24 @@ int pm_resume(enum pm_domain_e domain)
 		goto errout;
 	}
 	g_pmglobals.suspend_count[domain]--;
+
+	/* If LCD resume the pm operation then start the timer */
+	if ((domain == PM_LCD_DOMAIN) && (g_pmglobals.state < PM_STANDBY)) {
+		pm_timer_start();
+	} else {
+		/* Before starting the state change timer, ensure that no domain wants
+			to remain in this state.
+		*/
+		for (index = 0; index < CONFIG_PM_NDOMAINS; index++) {
+			if (g_pmglobals.suspend_count[index]) {
+				break;
+			}
+		}
+		if (index == CONFIG_PM_NDOMAINS) {
+			pm_timer_start();
+		}
+	}
+	
 errout:
 	leave_critical_section(flags);
 	return ret;

@@ -54,6 +54,7 @@
 #include <tinyara/pm/pm.h>
 #include <tinyara/wdog.h>
 #include <tinyara/sched.h>
+#include "pm.h"
 
 #include <pm_timer/pm_timer.h>
 
@@ -86,6 +87,41 @@ static void timer_timeout(int argc, uint32_t domain, uint32_t pid)
 		wd_delete(pid_timer_map[pid]);
         	pid_timer_map[pid] = NULL;
 	}
+}
+
+#if defined(CONFIG_PM_LCD_NORMAL_TO_IDLE_THRESH) && defined(CONFIG_PM_LCD_IDLE_TO_STANDBY_THRESH) && defined(CONFIG_PM_STANDBY_TO_SLEEP_THRESH)
+static uint32_t pm_gettimeinterval(void) {
+
+    uint32_t ret = 0;
+    if (g_pmglobals.state == PM_NORMAL) {
+        ret = CONFIG_PM_LCD_NORMAL_TO_IDLE_THRESH;
+    }
+    else if (g_pmglobals.state == PM_IDLE) {
+        ret = CONFIG_PM_LCD_IDLE_TO_STANDBY_THRESH;
+    }
+    else if (g_pmglobals.state == PM_STANDBY) {
+        ret = CONFIG_PM_STANDBY_TO_SLEEP_THRESH;
+    }
+
+    DEBUGASSERT(ret!=0);
+    return ret;
+}
+#endif
+
+
+static void pm_routine(int argc) {
+
+	/* After timer expiration change PM State to next low power state */
+    enum pm_state_e nextstate = pm_getnextstate();
+    pm_changestate(nextstate);
+
+	/* If device is not going to sleep, then start the timer again */
+    if(nextstate != PM_SLEEP) {
+        if(!g_pmglobals.wdog) {
+            g_pmglobals.wdog = wd_create();
+        }
+        wd_start(g_pmglobals.wdog, pm_gettimeinterval(), (wdentry_t)pm_routine, 0);
+    }
 }
 
 /************************************************************************
@@ -132,4 +168,62 @@ int pm_timedsuspend(enum pm_domain_e domain, unsigned int timer_interval)
 	}
 
 	return ret;
+}
+
+/****************************************************************************
+ * Name: pm_timer_reset
+ *
+ * Description:
+ *   It stops the pm state transition timer.
+ *
+ * Input Parameters:
+ *
+ * Returned Value:
+ *   0 (OK) if able to reset timer
+ * 	 Non Zero interger, on error.
+ *
+ ****************************************************************************/
+
+int pm_timer_reset(void)
+{
+    int ret = OK;
+
+	/* Cancel the timer*/
+    if (g_pmglobals.wdog) {
+        ret = wd_cancel(g_pmglobals.wdog);
+    }
+
+    return ret;
+}
+
+/****************************************************************************
+ * Name: pm_timer_start
+ *
+ * Description:
+ *   It starts the pm state transition timer.
+ *
+ * Input Parameters:
+ *
+ * Returned Value:
+ *   0 (OK) if able to start timer
+ * 	 Non Zero interger, on error.
+ *
+ ****************************************************************************/
+
+int pm_timer_start(void)
+{
+    int ret = -1;
+
+	/* Create WDOG timer if it is not already there */
+    if (!g_pmglobals.wdog) {
+        g_pmglobals.wdog = wd_create();
+    }
+
+	/* Start the WDOG timer with pm_routine call */
+    ret = wd_start(g_pmglobals.wdog, pm_gettimeinterval(), (wdentry_t)pm_routine, 0);
+    if (ret != OK) {
+        pmvdbg("Unable to start timer to change state from %d\n", g_pmglobals.state);
+    }
+
+    return ret;
 }

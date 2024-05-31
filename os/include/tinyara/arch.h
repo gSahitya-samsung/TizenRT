@@ -236,6 +236,21 @@ void board_initialize(void);
 void up_idle(void);
 
 /****************************************************************************
+ * Name: up_board_sleep
+ *
+ * Description:
+ *   This function signal the idle thread to make either board sleep or idle
+ * 
+ * Inputs:
+ * 	-flag: If true board will go to sleep else board remains idle
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_PM
+void up_board_sleep(bool flag);
+#endif
+
+/****************************************************************************
  * Name: up_initial_state
  *
  * Description:

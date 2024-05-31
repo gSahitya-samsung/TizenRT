@@ -150,4 +150,39 @@ enum pm_state_e pm_checkstate(void)
 	return g_pmglobals.recommended;
 }
 
+/****************************************************************************
+ * Name: pm_getnextstate
+ *
+ * Description:
+ *   This function check the curresnt state of PM. Based on current state it
+ *   gives the next low power state.
+ *
+ * Input Parameters:
+ *
+ * Returned Value:
+ *   The next power management state.
+ *
+ ****************************************************************************/
+
+enum pm_state_e pm_getnextstate(void)
+{
+    enum pm_state_e nextstate = PM_STANDBY;
+
+    switch (g_pmglobals.state) {
+    case PM_NORMAL:
+        nextstate = PM_IDLE;
+        break;
+    case PM_IDLE:
+        nextstate = PM_STANDBY;
+        break;
+    case PM_STANDBY:
+        nextstate = PM_SLEEP;
+        break;
+    default:
+        nextstate = PM_STANDBY;
+    }
+
+    return nextstate;
+}
+
 #endif							/* CONFIG_PM */
