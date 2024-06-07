@@ -565,7 +565,7 @@ int tash_execute_cmd(char **args, int argc)
 				if (pmdrv_fd < 0) {
 					shdbg("open /dev/pm failed(%d), \n", get_errno());
 				} else {
-					pm_suspended = ioctl(pmdrv_fd, PMIOC_SUSPEND, PM_NORMAL);
+					pm_suspended = ioctl(pmdrv_fd, PMIOC_SUSPEND, PM_IDLE_DOMAIN);
 					if (pm_suspended != OK) {
 						shdbg("pm_suspend failed(%d)\n", get_errno());
 					}
@@ -576,7 +576,7 @@ int tash_execute_cmd(char **args, int argc)
 				if (pmdrv_fd > 0) {
 					if (pm_suspended == OK) {
 						/* pm_resume should only be called when the pm_suspend is executed correctly. */
-						if (ioctl(pmdrv_fd, PMIOC_RESUME, PM_NORMAL) != OK) {
+						if (ioctl(pmdrv_fd, PMIOC_RESUME, PM_IDLE_DOMAIN) != OK) {
 							shdbg("pm_resume failed(%d)\n", get_errno());
 						}
 					}
