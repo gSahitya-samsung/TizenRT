@@ -79,11 +79,13 @@ static WDOG_ID pid_timer_map[CONFIG_MAX_TASKS];
 
 static void timer_timeout(int argc, int domain_id, uint32_t pid)
 {
-	/* PM transition will be relaxed here */
+	/* PM transition will be resume here */
 	if (pid_timer_map[pid] != NULL) {
 		pm_resume(domain_id);
-		wd_delete(pid_timer_map[pid]);
-        	pid_timer_map[pid] = NULL;
+		if (wd_delete(pid_timer_map[pid]) != OK) {
+			pmvdbg("Error deleting watchdog timer for pid: %d, got error: %d\n", pid, get_errno());
+		}
+		pid_timer_map[pid] = NULL;
 	}
 }
 
@@ -98,7 +100,7 @@ static void timer_timeout(int argc, int domain_id, uint32_t pid)
  *   This function locks PM state transition for a specific duration.  
  * 
  * Parameters:
- *   domain - state to be suspended
+ *   domain_id - ID of domain to be suspended
  *   timer_interval - expected lock duration in millisecond
  *
  * Return Value:
@@ -117,17 +119,23 @@ int pm_timedsuspend(int domain_id, unsigned int timer_interval)
 		pmdbg("There is already a lock timer running for this process\n");
 		return ERROR;
 	}
+	/* Lock the pm transition and Start the wdog timer */
+	if (pm_suspend(domain_id) != OK) {
+		pmvdbg("Unable to suspend domain ID: %d\n", domain_id);
+		return ERROR;
+	}
 
 	WDOG_ID wdog = wd_create();
 	pid_timer_map[pid] = wdog;
 
-	/* Lock the pm transition and Start the wdog timer */
-	pm_suspend(domain_id);
-	int ret = wd_start(wdog, timer_interval, (wdentry_t)timer_timeout, 2, domain_id, (uint32_t)pid);
-	pmvdbg("PM is locked for pid %d and timer started for %d milisecond\n", pid, timer_interval);
-	if (ret != OK) {
+	if (wd_start(wdog, timer_interval, (wdentry_t)timer_timeout, 2, domain_id, (uint32_t)pid) != OK) {
+		pmdbg("Error starting Wdog timer\n");
+		set_errno(EAGAIN);
+		if (pm_resume(domain_id) != OK) {
+			pmvdbg("Unable to resume domain ID: %d\n", domain_id);
+		}
 		return ERROR;
 	}
-
-	return ret;
+	pmvdbg("PM is locked for pid %d and timer started for %d milliseconds\n", pid, timer_interval);
+	return OK;
 }
