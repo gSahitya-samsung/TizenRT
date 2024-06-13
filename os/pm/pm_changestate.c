@@ -61,6 +61,10 @@
 #include <debug.h>
 #include <tinyara/pm/pm.h>
 #include <tinyara/irq.h>
+#include <tinyara/arch.h>
+#include <tinyara/lcd/lcd_dev.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
 
 #include "pm_metrics.h"
 #include "pm.h"
@@ -214,6 +218,8 @@ int pm_changestate(enum pm_state_e newstate)
 {
 	irqstate_t flags;
 	int ret = -1;
+	int fd = -1;
+	unsigned long power = 0;
 
 	/* Disable interrupts throught this operation... changing driver states
 	 * could cause additional driver activity that might interfere with the
@@ -227,6 +233,42 @@ int pm_changestate(enum pm_state_e newstate)
 	 * drivers may refuse the state change.
 	 */
 	if (newstate != PM_RESTORE) {
+
+		/* If new state is same as current state then do nothing*/
+		if (newstate == g_pmglobals.state) {
+			ret = OK;
+			goto EXIT;
+		}
+
+		/* If LCD invokes the state change then change the LCD Power */
+		else if (newstate == PM_NORMAL || newstate == PM_IDLE || (g_pmglobals.state == PM_IDLE && newstate == PM_STANDBY)) {
+			if(newstate == PM_NORMAL) {
+				power = CONFIG_LCD_NORMAL_POWER;
+			}
+			else if(newstate == PM_IDLE) {
+				power = CONFIG_LCD_IDLE_POWER;
+			}
+			else {
+				power = 0;
+			}
+			/* Change LCD Power */
+			fd = open(CONFIG_LCD_DEVPATH, O_RDWR | O_SYNC, 0666);
+			if (fd < 0) {
+				ret = -1;
+				pmdbg("Unable to open LCD Driver\n");
+				goto EXIT;
+			}
+			ret = ioctl(fd, LCDDEVIO_SETPOWER, power);
+			if(ret != OK) {
+				pmdbg("Unable to change LCD Power\n");
+				close(fd);
+				goto EXIT;
+			}
+			close(fd);
+			g_pmglobals.state = newstate;
+			goto EXIT;
+		}
+
 		ret = pm_prepall(newstate);
 		if (ret != OK) {
 			/* One or more drivers is not ready for this state change.  Revert to
@@ -252,6 +294,8 @@ int pm_changestate(enum pm_state_e newstate)
 			}
 		}
 #endif
+		/* Allow board to sleep */
+		up_board_sleep(true);
 
 	}
 EXIT:

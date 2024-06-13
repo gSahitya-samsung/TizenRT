@@ -80,7 +80,7 @@
  *   idle now, could relax the previous requested power level.
  *
  * Input Parameters:
- *   domain_id - The domain ID of the PM activity
+ *   domain - The domain of the PM activity
  *
  *     As an example, media player might relax power level after playback.
  *
@@ -96,6 +96,7 @@ int pm_resume(int domain_id)
 {
 	irqstate_t flags;
 	int ret = OK;
+	int index = -1;
 
 	flags = enter_critical_section();
 	if (domain_id < 0 || domain_id >= CONFIG_PM_NDOMAINS) {
@@ -109,6 +110,23 @@ int pm_resume(int domain_id)
 		goto errout;
 	}
 	g_pmglobals.suspend_count[domain_id]--;
+	/* If LCD resume the pm operation then start the timer */
+	if ((domain_id == PM_LCD_DOMAIN) && (g_pmglobals.state < PM_STANDBY)) {
+		pm_timer_start();
+	}
+	else {
+		/* Before starting the state change timer, ensure that no domain wants
+			to remain in this state.
+		*/
+		for (index = 0; index < CONFIG_PM_NDOMAINS; index++) {
+			if (g_pmglobals.suspend_count[index]) {
+				break;
+			}
+		}
+		if (index == CONFIG_PM_NDOMAINS) {
+			pm_timer_start();
+		}
+	}
 errout:
 	leave_critical_section(flags);
 	return ret;

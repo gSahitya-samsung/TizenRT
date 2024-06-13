@@ -501,6 +501,54 @@ uint16_t pm_suspendcount(int domain_id);
 enum pm_state_e pm_checkstate(void);
 
 /****************************************************************************
+ * Name: pm_getnextstate
+ *
+ * Description:
+ *   This function check the curresnt state of PM. Based on current state it
+ *   gives the next low power state.
+ *
+ * Input Parameters:
+ *
+ * Returned Value:
+ *   The next power management state.
+ *
+ ****************************************************************************/
+
+enum pm_state_e pm_getnextstate(void);
+
+/****************************************************************************
+ * Name: pm_timer_reset
+ *
+ * Description:
+ *   It stops the pm state transition timer.
+ *
+ * Input Parameters:
+ *
+ * Returned Value:
+ *   0 (OK) if able to reset timer
+ * 	 Non Zero interger, on error.
+ *
+ ****************************************************************************/
+
+int pm_timer_reset(void);
+
+/****************************************************************************
+ * Name: pm_timer_start
+ *
+ * Description:
+ *   It starts the pm state transition timer.
+ *
+ * Input Parameters:
+ *
+ * Returned Value:
+ *   0 (OK) if able to start timer
+ * 	 Non Zero interger, on error.
+ *
+ ****************************************************************************/
+
+int pm_timer_start(void);
+
+/****************************************************************************
  * Name: pm_changestate
  *
  * Description:

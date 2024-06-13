@@ -111,7 +111,16 @@ int pm_suspend(int domain_id)
 		set_errno(ERANGE);
 		goto errout;
 	}
+	/* prevent board going to sleep */
+	up_board_sleep(false);
 	g_pmglobals.suspend_count[domain_id]++;
+	if (domain_id == PM_LCD_DOMAIN) {
+		pm_timer_reset();
+		pm_changestate(PM_NORMAL);
+	}
+	else if (g_pmglobals.state == PM_STANDBY) {
+		pm_timer_reset();
+	}
 errout:
 	leave_critical_section(flags);
 	return ret;

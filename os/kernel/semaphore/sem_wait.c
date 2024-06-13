@@ -132,7 +132,7 @@ int sem_wait(FAR sem_t *sem)
 		return OK;
 	}
 #else
-	DEBUGASSERT(sem != NULL && up_interrupt_context() == false);
+	DEBUGASSERT(sem != NULL);
 #endif
 
 	/* The following operations must be performed with interrupts
