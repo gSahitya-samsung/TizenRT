@@ -598,6 +598,26 @@ enum pm_state_e pm_querystate(void);
 void pm_dvfs(int div_lvl);
 #endif
 
+#ifdef CONFIG_PM_METRICS
+/****************************************************************************
+ * Name: pm_metrics
+ *
+ * Description:
+ *   This internal function is called to analyze the PM suspend and sleep behaviour.
+ *   It gathers the pm metrics statistics for provided time (in msec) to provide the
+ *   domain specific pm suspend information.
+ *
+ * Input Parameters:
+ *   milliseconds - the monitoring duration in milliseconds
+ *
+ * Returned Value:
+ *   OK (0)     - On Success
+ *   ERROR (-1) - On Error
+ *
+ ****************************************************************************/
+int pm_metrics(int milliseconds);
+#endif
+
 void pm_driver_register(void);
 
 #undef EXTERN

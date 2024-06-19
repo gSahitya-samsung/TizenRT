@@ -1,0 +1,11 @@
+#
+# For a description of the syntax of this configuration file,
+# see kconfig-language at https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt
+#
+
+config SYSTEM_PM_METRICS
+	bool "PM Metrics Tool"
+	default n
+	depends on PM_METRICS
+	---help---
+		Monitor PM suspend and sleep to display PM Metrics.

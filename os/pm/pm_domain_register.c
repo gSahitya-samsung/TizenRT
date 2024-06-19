@@ -26,6 +26,9 @@
 #include <errno.h>
 
 #include "pm.h"
+#ifdef CONFIG_PM_METRICS
+#include "pm_metrics.h"
+#endif
 
 #ifdef CONFIG_PM
 
@@ -78,6 +81,10 @@ int pm_domain_register(char *domain) {
 				return ERROR;
 			}
 			strncpy(pm_domain_map[index], domain, length + 1);
+#ifdef CONFIG_PM_METRICS
+			/* For newly registered domain initialize its pm metrics*/
+			pm_domain_metricinitialize(index);
+#endif
 			return index;
 		/* If domain of same length and characters is in our map , then return the corresponding domain ID */
 		} else if ((length == strlen(pm_domain_map[index])) && (strncmp(pm_domain_map[index], domain, length) == 0)) {

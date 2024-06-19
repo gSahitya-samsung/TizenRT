@@ -241,6 +241,9 @@ int pm_changestate(enum pm_state_e newstate)
 		* disagreed and the state has been reverted).  Set the new state.
 		*/
 		pm_changeall(newstate);
+#ifdef CONFIG_PM_METRICS
+		pm_changestate_metrics_update();
+#endif
 		g_pmglobals.state = newstate;
 	}
 EXIT:

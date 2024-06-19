@@ -467,6 +467,9 @@
 #ifdef CONFIG_PM_DVFS
 #define PMIOC_TUNEFREQ           _PMIOC(0x0006)
 #endif
+#ifdef CONFIG_PM_METRICS
+#define PMIOC_METRICS            _PMIOC(0x0007)
+#endif
 
 /* Cpuload driver ioctl definitions ************************/
 

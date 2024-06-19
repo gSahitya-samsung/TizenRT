@@ -63,6 +63,9 @@
 #include <errno.h>
 
 #include "pm.h"
+#ifdef CONFIG_PM_METRICS
+#include "pm_metrics.h"
+#endif
 
 #ifdef CONFIG_PM
 
@@ -111,6 +114,9 @@ int pm_suspend(int domain_id)
 		set_errno(ERANGE);
 		goto errout;
 	}
+#ifdef CONFIG_PM_METRICS
+	pm_suspend_metrics_update(domain_id);
+#endif
 	g_pmglobals.suspend_count[domain_id]++;
 errout:
 	leave_critical_section(flags);

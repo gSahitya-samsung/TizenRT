@@ -23,7 +23,43 @@
 #include <queue.h>
 #include "pm.h"
 
+struct pm_statechange_s {
+	sq_entry_t entry;
+	int state;
+	time_t timestamp;
+};
+
+struct pm_time_in_each_s {
+	time_t normal;
+	time_t idle;
+	time_t standby;
+	time_t sleep;
+};
+
+typedef struct pm_time_in_each_s pm_time_in_each_t;
+
+struct pm_metric_global_s {
+	clock_t suspend_ticks[CONFIG_PM_NDOMAINS];
+	clock_t resume_ticks[CONFIG_PM_NDOMAINS];
+	clock_t dtime[CONFIG_PM_NDOMAINS];
+	uint32_t idle_suspend_counts[CONFIG_PM_NDOMAINS];
+	clock_t sticks[PM_COUNT];
+	clock_t stime;
+	uint32_t total_suspend_counts;
+};
+
+typedef struct pm_metric_global_s pm_metric_global_t;
+
 #ifdef CONFIG_PM_METRICS
 extern struct pm_global_s g_pmglobals;
+extern pm_metric_global_t *g_pm_metrics_globals;
+
+void pm_get_domainmetrics(struct pm_time_in_each_s *mtrics);
+void pm_prune_history(sq_queue_t *q);
+void pm_domain_metricinitialize(int domain_id);
+void pm_suspend_metrics_update(int domain_id);
+void pm_resume_metrics_update(int domain_id);
+void pm_changestate_metrics_update(void);
+void pm_idle_metrics_update(void);
 #endif
 #endif
