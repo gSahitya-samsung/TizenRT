@@ -240,6 +240,8 @@ void tizenrt_pre_sleep_processing(uint32_t *expected_idle_time)
 	/* ms =x*1000/32768 = (x *1000) >>15 */
 	ms_passed = (u32)((((u64)tick_passed) * 1000) >> 15);
 
+	u16 wakeup_reason = HAL_READ16(SYSTEM_CTRL_BASE_LP, REG_LSYS_DUMMY_090);
+
 #ifndef CONFIG_PLATFORM_TIZENRT_OS
 	vTaskStepTick(ms_passed); /*  update kernel tick */
 #else
@@ -256,7 +258,7 @@ void tizenrt_pre_sleep_processing(uint32_t *expected_idle_time)
 	pmu_set_sysactive_time(2);
 #endif
 
-	pmvdbg("ap sleeped:[%d] ms\n", ms_passed);
+	pmvdbg("ap sleeped:[%d] ms, wakeup reason = %x\n", ms_passed, wakeup_reason);
 }
 
 CONFIG_FW_CRITICAL_CODE_SECTION
