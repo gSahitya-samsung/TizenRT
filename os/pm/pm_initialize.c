@@ -61,8 +61,6 @@
 #include <tinyara/pm/pm.h>
 #include <time.h>
 #include "pm.h"
-#include "pm_metrics.h"
-
 #ifdef CONFIG_PM
 
 /****************************************************************************
@@ -117,30 +115,5 @@ void pm_initialize(void)
 	/* Registers a handler to be called when the core wakes up */
 	up_register_wakehandler(pm_wakehandler);
 #endif
-
-#ifdef CONFIG_PM_METRICS
-	struct timespec cur_time;
-
-	/* Get current time */
-	clock_gettime(CLOCK_REALTIME, &cur_time);
-
-	struct pm_statechange_s *initnode = NULL;
-
-	/* Initialize the domain's state history queue */
-
-	sq_init(&g_pmglobals.history);
-
-	/* Create an initial state change node with NORMAL state and bootup time */
-
-	initnode = (struct pm_statechange_s *)pm_alloc(1, sizeof(struct pm_statechange_s));
-
-	initnode->state = PM_NORMAL;
-	initnode->timestamp = cur_time.tv_sec;
-
-	/* Add the initial state change node to the head of the history queue */
-
-	sq_addlast((&initnode->entry), &g_pmglobals.history);
-#endif
-
 }
 #endif							/* CONFIG_PM */
