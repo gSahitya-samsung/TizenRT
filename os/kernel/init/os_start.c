@@ -870,9 +870,13 @@ void os_start(void)
 		sched_garbagecollection();
 #endif
 
+#ifdef CONFIG_PM
+		/* Perform PM idle operation to save power */
+		pm_idle();
+#else
 		/* Perform any processor-specific idle state operations */
-
 		up_idle();
+#endif
 	}
 }
 

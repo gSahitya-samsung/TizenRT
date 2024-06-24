@@ -120,6 +120,9 @@
 #ifdef CONFIG_ARMV8M_TRUSTZONE
 #include <tinyara/tz_context.h>
 #endif
+#ifdef CONFIG_PM
+#include <tinyara/pm/pm.h>
+#endif
 
 #include <arch/arch.h>
 /****************************************************************************
@@ -234,6 +237,40 @@ void board_initialize(void);
  ****************************************************************************/
 
 void up_idle(void);
+
+#ifdef CONFIG_PM
+/****************************************************************************
+ * Name: up_pm_board_sleep
+ *
+ * Description:
+ *   Perform IDLE state power management.
+ *
+ * Input Parameters:
+ *   handler - The handler function that must be called after each board wakeup.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void up_pm_board_sleep(void (*handler)(clock_t, pm_wakeup_reason_code_t));
+#endif
+
+/****************************************************************************
+ * Name: up_core_low_power
+ *
+ * Description:
+ *   Reduce power during CPU IDLE state.
+ *
+ * Input Parameters:
+ *   None.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void up_core_low_power(void);
 
 /****************************************************************************
  * Name: up_initial_state

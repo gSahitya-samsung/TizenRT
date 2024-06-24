@@ -92,78 +92,80 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_idlepm
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: up_core_low_power
+ *
+ * Description:
+ *   Reduce power during CPU IDLE state.
+ *
+ * Input Parameters:
+ *   None.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void up_core_low_power(void)
+{
+	/* NOTE:  There is an STM32F107 errata that is fixed by the following
+	 * workaround:
+	 *
+	 * "2.17.11 Ethernet DMA not working after WFI/WFE instruction
+	 *  Description
+	 *  If a WFI/WFE instruction is executed to put the system in sleep mode
+	 *    while the Ethernet MAC master clock on the AHB bus matrix is ON and all
+	 *    remaining masters clocks are OFF, the Ethernet DMA will be not able to
+	 *    perform any AHB master accesses during sleep mode."
+	 *
+	 *  Workaround
+	 *    Enable DMA1 or DMA2 clocks in the RCC_AHBENR register before
+	 *    executing the WFI/WFE instruction."
+	 *
+	 * Here the workaround is just to avoid SLEEP mode for the connectivity
+	 * line parts if Ethernet is enabled.  The errate recommends a  more
+	 * general solution:  Enabling DMA1/2 clocking in stm32f10xx_rcc.c if the
+	 * STM32107 Ethernet peripheral is enabled.
+	 */
+	/* set core to WFI */
+#if !defined(CONFIG_STM32_CONNECTIVITYLINE) || !defined(CONFIG_STM32_ETHMAC)
+#if !(defined(CONFIG_DEBUG_SYMBOLS) && defined(CONFIG_STM32_DISABLE_IDLE_SLEEP_DURING_DEBUG))
+	BEGIN_IDLE();
+	asm("WFI");
+	END_IDLE();
+#endif
+#endif
+}
+
+#ifdef CONFIG_PM
+/****************************************************************************
+ * Name: up_pm_board_sleep
  *
  * Description:
  *   Perform IDLE state power management.
  *
+ * Input Parameters:
+ *   handler - The handler function that must be called after each board wakeup.
+ *
+ * Returned Value:
+ *   None.
+ *
  ****************************************************************************/
 
-#ifdef CONFIG_PM
-static void up_idlepm(void)
+void up_pm_board_sleep(void (*handler)(clock_t, pm_wakeup_reason_code_t))
 {
-	static enum pm_state_e oldstate = PM_NORMAL;
-	enum pm_state_e newstate;
 	irqstate_t flags;
-	int ret;
-
-	/* Decide, which power saving level can be obtained */
-
-	newstate = pm_checkstate();
-
-	/* Check for state changes */
-
-	if (newstate != oldstate) {
-		flags = irqsave();
-
-		/* Perform board-specific, state-dependent logic here */
-
-		sllvdbg("newstate= %d oldstate=%d\n", newstate, oldstate);
-
-		/* Then force the global state change */
-
-		ret = pm_changestate(newstate);
-		if (ret < 0) {
-			/* The new state change failed, revert to the preceding state */
-
-			(void)pm_changestate(oldstate);
-		} else {
-			/* Save the new state */
-
-			oldstate = newstate;
-		}
-
-		/* MCU-specific power management logic */
-
-		switch (newstate) {
-		case PM_NORMAL:
-			break;
-
-		case PM_IDLE:
-			break;
-
-		case PM_STANDBY:
-			stm32_pmstop(true);
-			break;
-
-		case PM_SLEEP:
-			(void)stm32_pmstandby();
-			break;
-
-		default:
-			break;
-		}
-
-		irqrestore(flags);
-	}
+	flags = irqsave();
+	/* MCU-specific power management logic */
+	(void)stm32_pmstandby();
+	irqrestore(flags);
 }
 #else
-#define up_idlepm()
+#define up_pm_board_sleep(handler)
 #endif
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Name: up_idle
@@ -187,39 +189,7 @@ void up_idle(void)
 
 	sched_process_timer();
 #else
-
-	/* Perform IDLE mode power management */
-
-	up_idlepm();
-
-	/* Sleep until an interrupt occurs to save power.
-	 *
-	 * NOTE:  There is an STM32F107 errata that is fixed by the following
-	 * workaround:
-	 *
-	 * "2.17.11 Ethernet DMA not working after WFI/WFE instruction
-	 *  Description
-	 *  If a WFI/WFE instruction is executed to put the system in sleep mode
-	 *    while the Ethernet MAC master clock on the AHB bus matrix is ON and all
-	 *    remaining masters clocks are OFF, the Ethernet DMA will be not able to
-	 *    perform any AHB master accesses during sleep mode."
-	 *
-	 *  Workaround
-	 *    Enable DMA1 or DMA2 clocks in the RCC_AHBENR register before
-	 *    executing the WFI/WFE instruction."
-	 *
-	 * Here the workaround is just to avoid SLEEP mode for the connectivity
-	 * line parts if Ethernet is enabled.  The errate recommends a  more
-	 * general solution:  Enabling DMA1/2 clocking in stm32f10xx_rcc.c if the
-	 * STM32107 Ethernet peripheral is enabled.
-	 */
-
-#if !defined(CONFIG_STM32_CONNECTIVITYLINE) || !defined(CONFIG_STM32_ETHMAC)
-#if !(defined(CONFIG_DEBUG_SYMBOLS) && defined(CONFIG_STM32_DISABLE_IDLE_SLEEP_DURING_DEBUG))
-	BEGIN_IDLE();
-	asm("WFI");
-	END_IDLE();
-#endif
-#endif
+	/* Reduce power during CPU IDLE state */
+	up_core_low_power();
 #endif
 }
