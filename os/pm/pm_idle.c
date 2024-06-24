@@ -28,6 +28,9 @@
 #include <tinyara/arch.h>
 
 #include "pm.h"
+#ifdef CONFIG_PM_METRICS
+#include "pm_metrics.h"
+#endif
 
 #ifdef CONFIG_PM
 
@@ -82,6 +85,9 @@ void pm_idle(void)
 	}
 	/* If current state is not good to go sleep then do core power saving*/
 	if (g_pmglobals.state != PM_SLEEP) {
+#ifdef CONFIG_PM_METRICS
+		pm_idle_metrics_update();
+#endif
 		leave_critical_section(flags);
 		/* core power efficiency during idle time */
 		up_core_low_power();

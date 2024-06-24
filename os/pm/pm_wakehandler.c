@@ -27,6 +27,9 @@
 #include <arch/limits.h>
 
 #include "pm.h"
+#ifdef CONFIG_PM_METRICS
+#include "pm_metrics.h"
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -68,5 +71,8 @@ void pm_wakehandler(clock_t missing_tick, pm_wakeup_reason_code_t wakeup_src)
 	pm_changestate(PM_STANDBY);
 	g_pmglobals.stime = clock_systimer();
 
+#ifdef CONFIG_PM_METRICS
+	pm_wakeup_metrics_update(wakeup_src);
+#endif
 	leave_critical_section(flags);
 }

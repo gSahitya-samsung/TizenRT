@@ -21,6 +21,7 @@
 
 #include <time.h>
 #include <queue.h>
+#include <tinyara/pm/pm.h>
 #include "pm.h"
 
 struct pm_statechange_s {
@@ -44,6 +45,8 @@ struct pm_metric_global_s {
 	clock_t dtime[CONFIG_PM_NDOMAINS];
 	uint32_t idle_suspend_counts[CONFIG_PM_NDOMAINS];
 	clock_t sticks[PM_COUNT];
+	uint32_t wakeup_src_counts[PM_WAKEUP_SRC_COUNT];
+	uint32_t wakeup_unknown_counts;
 	clock_t stime;
 	uint32_t total_suspend_counts;
 };
@@ -61,5 +64,6 @@ void pm_suspend_metrics_update(int domain_id);
 void pm_resume_metrics_update(int domain_id);
 void pm_changestate_metrics_update(void);
 void pm_idle_metrics_update(void);
+void pm_wakeup_metrics_update(pm_wakeup_reason_code_t wakeup_src);
 #endif
 #endif

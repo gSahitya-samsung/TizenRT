@@ -17,6 +17,7 @@
  ****************************************************************************/
 
 #include <tinyara/config.h>
+#include <tinyara/pm/pm.h>
 #include <time.h>
 #include <queue.h>
 #include <debug.h>
@@ -33,9 +34,16 @@ static void pm_print_metrics(void)
 	double suspend_percent;
 	double idle_counts_percent;
 	double total_time;
+	double total_wakeup_src_counts;
 	int index;
 	static const char *state_name[] = {"PM_NORMAL", "PM_IDLE", "PM_STANDBY", "PM_SLEEP", NULL};
+	static const char *wakeup_src_name[] = {"BLE", "WIFI", "LOG UART", "UART", "GPIO", "HW TIMER"};
+	static const char wakeup_unknown_src_name[] = "UNKNOWN";
 	total_time = 0.0;
+	total_wakeup_src_counts = g_pm_metrics_globals->wakeup_unknown_counts;
+	for (index = 0; index < PM_WAKEUP_SRC_COUNT; index++) {
+		total_wakeup_src_counts += (double)g_pm_metrics_globals->wakeup_src_counts[index];
+	}
 	for (index = 0; index < PM_COUNT; index++) {
 		total_time += (double)TICK2MSEC(g_pm_metrics_globals->sticks[index]);
 	}
@@ -49,6 +57,17 @@ static void pm_print_metrics(void)
 		idle_counts_percent = (double)(g_pm_metrics_globals->idle_suspend_counts[index]) * 100.0 / (double)(g_pm_metrics_globals->total_suspend_counts);
 		pmdbg(" %30s | %10dms (%6.2f%%) | %9d (%6.2f%%) \n", pm_domain_map[index], (int)suspend_duration, suspend_percent,\
 		g_pm_metrics_globals->idle_suspend_counts[index], idle_counts_percent);
+	}
+	pmdbg("\n\n");
+	if (total_wakeup_src_counts) {
+		pmdbg(" WAKEUP SOURCES |      COUNTS      \n");
+		pmdbg("----------------|------------------\n");
+		for (index = 0; index < PM_WAKEUP_SRC_COUNT; index++) {
+			pmdbg(" %14s | %6d (%6.2f%%) \n", wakeup_src_name[index], g_pm_metrics_globals->wakeup_src_counts[index],\
+			((double)g_pm_metrics_globals->wakeup_src_counts[index]) * 100.0 / total_wakeup_src_counts);
+		}
+		pmdbg(" %14s | %6d (%6.2f%%) \n", wakeup_unknown_src_name, g_pm_metrics_globals->wakeup_unknown_counts,\
+			((double)g_pm_metrics_globals->wakeup_unknown_counts) * 100.0 / total_wakeup_src_counts);
 	}
 	pmdbg("\n\n");
 	pmdbg("    STATE    |          TIME          \n");
@@ -118,6 +137,18 @@ void pm_changestate_metrics_update(void)
 		now = clock_systimer();
 		g_pm_metrics_globals->sticks[g_pmglobals.state] += now - g_pm_metrics_globals->stime;
 		g_pm_metrics_globals->stime = now;
+	}
+}
+
+
+void pm_wakeup_metrics_update(pm_wakeup_reason_code_t wakeup_src)
+{
+	if (g_pm_metrics_globals) {
+		if (wakeup_src == PM_WAKEUP_UNKNOWN) {
+			g_pm_metrics_globals->wakeup_unknown_counts++;
+		} else {
+			g_pm_metrics_globals->wakeup_src_counts[wakeup_src]++;
+		}
 	}
 }
 

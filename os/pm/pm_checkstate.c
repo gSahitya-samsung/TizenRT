@@ -61,9 +61,6 @@
 #include <tinyara/irq.h>
 
 #include "pm.h"
-#ifdef CONFIG_PM_METRICS
-#include "pm_metrics.h"
-#endif
 
 #ifdef CONFIG_PM
 
@@ -146,10 +143,6 @@ enum pm_state_e pm_checkstate(void)
 			}
 		}
 	}
-#ifdef CONFIG_PM_METRICS
-	/* Note: Need to move below PM metrics code into pm_idle after its implementation*/
-	pm_idle_metrics_update();
-#endif
 	leave_critical_section(flags);
 	return g_pmglobals.recommended;
 }
