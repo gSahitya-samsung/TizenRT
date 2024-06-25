@@ -598,6 +598,13 @@ enum pm_state_e pm_querystate(void);
 void pm_dvfs(int div_lvl);
 #endif
 
+/****************************************************************************
+ * Name: pm_driver_register
+ *
+ * Description:
+ *   Register pm driver path, PM_DRVPATH
+ *
+ ****************************************************************************/
 void pm_driver_register(void);
 
 #undef EXTERN
