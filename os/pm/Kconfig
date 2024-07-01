@@ -89,11 +89,12 @@ endif # PM_TIMEDWAKEUP
 endif # PM_TICKSUPPRESS
 
 config PM_DOMAIN_NAME_SIZE
-	int "PM_DOMAIN_NAME_SIZE enter size"
+	int "Maximum Length of Domain String"
 	default 32
 	---help---
 		This value represents maxinmum domain string size. The domain string should be less than
-		this size.
+		this size. This config is intended to reduce unwanted memory consumption cause of long 
+		domain string.
 
 endif # PM
 
