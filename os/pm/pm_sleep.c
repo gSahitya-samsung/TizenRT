@@ -73,12 +73,6 @@
  * Public Functions
  ************************************************************************/
 
-static void pm_timer_callback(int argc, uint32_t sem)
-{
-	/* As the timer is expired, give back the semaphore to unlock the thread */
-	sem_post((sem_t *)sem);
-}
-
 /************************************************************************
  * Name: pm_sleep
  *
@@ -102,47 +96,19 @@ static void pm_timer_callback(int argc, uint32_t sem)
 
 int pm_sleep(int milliseconds)
 {
-	sem_t pm_sem;
-	irqstate_t flags;
+	struct timespec rqtp;
+	struct timespec rmtp;
 	int ret = ERROR;
-	/* TODO - Since PM & Kernel are separate, we should not use tcb inside pm.
-	 * We need to remove tcb in future.
-	 */
-	FAR struct tcb_s *rtcb = sched_self();
-	/* initialize the timer's semaphore. It will be used to lock the
-	 * thread before sleep and unlock after expire */
-	sem_init(&pm_sem, 0, 0);
-	flags = enter_critical_section();
-	DEBUGASSERT(rtcb->waitdog == NULL);
-	/* Create wakeup timer */
-	rtcb->waitdog = wd_create();
-	if (!rtcb->waitdog) {
-		set_errno(EAGAIN);
-		pmdbg("Error creating wdog timer\n");
-		goto errout;
+	/* Don't sleep if milliseconds == 0 */
+	if (milliseconds >= CONFIG_PM_MIN_SLEEP_TIME) {
+		/* Let nanosleep() do all of the work. */
+		rqtp.tv_sec = (milliseconds / 1000);
+		rqtp.tv_nsec = (milliseconds % 1000) * 1000000;
+		if (nanosleep(&rqtp, &rmtp) == 0) {
+			ret = OK;
+		}
+	} else {
+		pmdbg("Minimum sleep time should be greater than %dms\n", CONFIG_PM_MIN_SLEEP_TIME);
 	}
-	/* set this timer as wakeup source */
-	if (wd_setwakeupsource(rtcb->waitdog) != OK) {
-		pmdbg("Error setting wakeup flag to wdog timer\n");
-		wd_delete(rtcb->waitdog);
-		goto errout;
-	}
-	/* before going into sleep start the wakeup timer */
-	ret = wd_start(rtcb->waitdog, MSEC2TICK(milliseconds), (wdentry_t)pm_timer_callback, 1, (uint32_t)&pm_sem);
-	if (ret != OK) {
-		pmdbg("pm_sleep: wd_start failed\n");
-		wd_delete(rtcb->waitdog);
-		goto errout;
-	}
-	/* sem_wait untill the timer expires */
-	do {
-		ret = sem_wait(&pm_sem);
-		DEBUGASSERT(ret == 0 || errno == EINTR);
-	} while (ret < 0);
-	/* When the semaphore is freed, make the pm timer free */
-	wd_delete(rtcb->waitdog);
-errout:
-	rtcb->waitdog = NULL;
-	leave_critical_section(flags);
-	return ret;
+	return 0;
 }

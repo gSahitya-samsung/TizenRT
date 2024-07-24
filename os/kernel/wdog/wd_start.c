@@ -250,6 +250,12 @@ int wd_start(WDOG_ID wdog, int delay, wdentry_t wdentry, int argc, ...)
 		return ERROR;
 	}
 
+#ifdef CONFIG_PM
+	if ((wdog == sched_self()->waitdog) && (delay >= CONFIG_PM_MIN_SLEEP_TIME)) {
+		wd_setwakeupsource(wdog);
+	}
+#endif
+
 	/* Check if the watchdog has been started. If so, stop it.
 	 * NOTE:  There is a race condition here... the caller may receive
 	 * the watchdog between the time that wd_start is called and
