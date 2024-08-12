@@ -744,6 +744,127 @@ int tash_cmd_install(const char *str, TASH_CMD_CALLBACK cb, int thread_exec)
  *
  * @endcode
  **/
+void pm_test_suspend(int argc, char * argv[]) {
+	int fd = open("/dev/pm", O_RDONLY);
+	if (fd < 0) {
+		printf("Cannot open /dev/pm file with fd = %d\n", fd);
+	}
+	int ret = ioctl(fd, PMIOC_SUSPEND, atoi(argv[1]));
+	printf("Ret is %d\n", ret);
+	close(fd);
+}
+void pm_test_resume(int argc, char * argv[]) {
+	int fd = open("/dev/pm", O_RDONLY);
+	if (fd < 0) {
+		printf("Cannot open /dev/pm file with fd = %d\n", fd);
+	}
+	int ret = ioctl(fd, PMIOC_RESUME, atoi(argv[1]));
+	printf("Ret is %d\n", ret);
+	close(fd);
+}
+void pm_test_domain_register(int argc, char * argv[]) {
+	int fd = open("/dev/pm", O_RDONLY);
+	if (fd < 0) {
+		printf("Cannot open /dev/pm file with fd = %d\n", fd);
+	}
+	pm_domain_arg_t domain_arg;
+    domain_arg.domain_name = argv[1];
+	domain_arg.domain_id = 51;
+
+	int ret = ioctl(fd, PMIOC_DOMAIN_REGISTER, &domain_arg);
+	printf("Ret is %d\n", ret);
+	printf("DomainID is %d\n", domain_arg.domain_id);
+	close(fd);
+}
+void pm_test_timer_resume(int argc, char *argv[]) {
+	int fd = open("/dev/pm", O_RDONLY);
+	if (fd < 0) {
+		printf("Cannot open /dev/pm file with fd = %d\n", fd);
+	}
+	// pm_domain_arg_t domain_arg;
+    // domain_arg.domain_name = argv[1];
+	// domain_arg.domain_id = 51;
+
+	int ret = ioctl(fd, 300, atoi(argv[1]));
+	printf("Ret is %d\n", ret);
+	// printf("DomainID is %d\n", domain_arg.domain_id);
+	close(fd);
+}
+
+void pm_test_timedsuspend(int argc, char *argv[]) {
+	int fd = open("/dev/pm", O_RDONLY);
+	if (fd < 0) {
+		printf("Cannot open /dev/pm file with fd = %d\n", fd);
+	}
+	pm_suspend_arg_t arg;
+	arg.domain_id = atoi(argv[1]);
+	arg.timer_interval = atoi(argv[2]);
+	// pm_domain_arg_t domain_arg;
+    // domain_arg.domain_name = argv[1];
+	// domain_arg.domain_id = 51;
+
+	int ret = ioctl(fd, PMIOC_TIMEDSUSPEND, &arg);
+	printf("Ret is %d\n", ret);
+	// printf("DomainID is %d\n", domain_arg.domain_id);
+	close(fd);
+}
+
+void pm_test_sleep(int argc, char *argv[]) {
+	int fd = open("/dev/pm", O_RDONLY);
+	if (fd < 0) {
+		printf("Cannot open /dev/pm file with fd = %d\n", fd);
+	}
+	int ret = OK;
+	printf("SLEEPING for %s\n", argv[1]);
+	while(ret==OK) {
+		ret = ioctl(fd, PMIOC_SLEEP, atoi(argv[1]));
+	}
+	printf("Ret is %d\n", ret);
+	// printf("DomainID is %d\n", domain_arg.domain_id);
+	close(fd);
+}
+
+// void pm_test_start(int argc, char *argv[]) {
+// 	int fd = open("/dev/pm", O_RDONLY);
+// 	if (fd < 0) {
+// 		printf("Cannot open /dev/pm file with fd = %d\n", fd);
+// 	}
+// 	int ret = ioctl(fd, PMIOC_START, NULL);
+// 	printf("Ret is %d\n", ret);
+// 	// printf("DomainID is %d\n", domain_arg.domain_id);
+// 	close(fd);
+// }
+
+void tickCheck(int argc, char *argv[]) {
+	printf("TICK IS %d\n", MSEC2TICK(atoi(argv[1])));
+}
+
+static int pm_test_test(int args, char *argv[]) {
+	int fd = open("/dev/pm", O_RDONLY);
+	if (fd < 0) {
+		printf("Cannot open /dev/pm file with fd = %d\n", fd);
+	}
+	ioctl(fd, 500, argv);
+
+	close(fd);
+	return 0;
+}
+
+// void pm_test_metrics(int argc, char *argv[]) {
+// 	int fd = open("/dev/pm", O_RDONLY);
+// 	if (fd < 0) {
+// 		printf("Cannot open /dev/pm file with fd = %d\n", fd);
+// 	}
+// 	// pm_domain_arg_t domain_arg;
+//     // domain_arg.domain_name = argv[1];
+// 	// domain_arg.domain_id = 51;
+
+// 	int ret = ioctl(fd, PMIOC_METRICS, atoi(argv[1]));
+// 	printf("Ret is %d\n", ret);
+// 	// printf("DomainID is %d\n", domain_arg.domain_id);
+// 	close(fd);
+// }
+
 void tash_cmdlist_install(const tash_cmdlist_t list[])
 {
 	const tash_cmdlist_t *map;
@@ -751,6 +872,17 @@ void tash_cmdlist_install(const tash_cmdlist_t list[])
 	for (map = list; map->entry; map++) {
 		tash_cmd_install(map->name, map->entry, map->exectype);
 	}
+	tash_cmd_install("pm_suspend", pm_test_suspend, TASH_EXECMD_ASYNC);
+	tash_cmd_install("pm_resume", pm_test_resume, TASH_EXECMD_ASYNC);
+	tash_cmd_install("pm_domain_register", pm_test_domain_register, TASH_EXECMD_ASYNC);
+	tash_cmd_install("pm_timer_resume", pm_test_timer_resume, TASH_EXECMD_ASYNC);
+	tash_cmd_install("pm_timedsuspend", pm_test_timedsuspend, TASH_EXECMD_ASYNC);
+	tash_cmd_install("pm_tickcheck", tickCheck, TASH_EXECMD_ASYNC);
+	tash_cmd_install("pm_sleep", pm_test_sleep, TASH_EXECMD_ASYNC);
+	tash_cmd_install("pm_test", pm_test_test, TASH_EXECMD_ASYNC);
+	// tash_cmd_install("pm_start", pm_test_start, TASH_EXECMD_ASYNC);
+	// tash_cmd_install("pm_metrics", pm_test_metrics, TASH_EXECMD_ASYNC);
+	
 }
 
 void tash_register_basic_cmds(void)
