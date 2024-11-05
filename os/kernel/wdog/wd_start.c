@@ -454,30 +454,6 @@ void wd_timer(void)
 {
 	/* Check if there are any active watchdogs to process */
 
-#ifdef CONFIG_SCHED_TICKSUPPRESS
-	FAR struct wdog_s *wdog;
-	int decr;
-
-	while (g_wd_ticks > 0 && g_wdactivelist.head) {
-		/* Get the watchdog at the head of the list */
-
-		wdog = (FAR struct wdog_s *)g_wdactivelist.head;
-
-		/* Decrement the lag for this watchdog. */
-
-		decr = MIN(wdog->lag, g_wd_ticks);
-
-		/* There are.  Decrement the lag counter */
-
-		wdog->lag -= decr;
-		g_wd_ticks -= decr;
-
-		/* Check if the watchdog at the head of the list is ready to run */
-
-		wd_expiration();
-	}
-#endif
-
 	if (g_wdactivelist.head) {
 		/* There are.  Decrement the lag counter */
 
@@ -494,6 +470,21 @@ void wd_timer(void)
 #ifdef CONFIG_SCHED_TICKSUPPRESS
 void wd_timer_nohz(clock_t ticks)
 {
-	g_wd_ticks += ticks;
+	FAR struct wdog_s *wdog;
+	int decr;
+
+	for (wdog = g_wdactivelist.head; ticks > 0 && wdog; wdog = wdog->next) {
+
+		/* Decrement the lag for this watchdog. */
+
+		decr = MIN(wdog->lag, ticks);
+
+		/* There are.  Decrement the lag counter */
+
+		wdog->lag -= decr;
+		ticks -= decr;
+
+		/* Expires when the next wd_timer is called.*/
+	}
 }
 #endif
