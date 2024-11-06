@@ -62,15 +62,15 @@ void pm_wakehandler(clock_t missing_tick, pm_wakeup_reason_code_t wakeup_src)
 	pmllvdbg("missing_tick: %llu\n", missing_tick);
 #ifdef CONFIG_PM_TICKSUPPRESS
 	if (missing_tick > 0) {
-		/* Correcting for missed system ticks in sleep. */
+		/* Correcting the missed system ticks during sleep. */
 		clock_timer_nohz(missing_tick);
 
-		/* Corrects for missed wd timer ticks during sleep.
-		 * But to compensate for the operation time of the HW IRQ handler in wakeup,
-		 * the wd_timer does not expire during here.
-		 *
-		 * The expiration action of wd timer is performed in the first tick isr after
-		 * wakeup.
+		/* During board sleep the wd timer ticks gets missed because
+		 * of resting CPU. We compensate missed wd timer ticks immediately
+		 * after board wakeup in HW IRQ but the expired wd timer will not
+		 * execute to save board wakeup time.
+		 * 
+		 * Note :- All expired wd timer got executed in first TICK ISR after board wakeup.
 		 *
 		 *     WAKE HANDLER -> HW IRQ ISR -> THREAD -> TICK ISR
 		 *           |              |          |           |
