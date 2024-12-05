@@ -85,6 +85,11 @@ typedef enum {
 	CPU_WAKE_FROM_SLEEP = 2, /* CPU just wake from sleep but not in task scheduler */
 } cpu_state_t;
 
+typedef enum {
+	DISABLE_GATE_STATUS = 0, /* Flag to disable gating status */
+	ENABLE_GATE_STATUS  = 1, /* Flag to enable gating status */
+} gate_status_t;
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/

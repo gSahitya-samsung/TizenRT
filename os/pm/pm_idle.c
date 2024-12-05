@@ -112,7 +112,7 @@ void pm_idle(void)
 
 				/* Gate the cpu first, before checking which task it is handling */
 				if (!up_get_gating_flag_status(cpu)) {
-					up_set_gating_flag_status(cpu, 1);
+					up_set_gating_flag_status(cpu, ENABLE_GATE_STATUS);
 					up_cpu_gating(cpu);
 				}
 				while (up_get_gating_flag_status(cpu) == 1) {
@@ -163,7 +163,7 @@ void pm_idle(void)
 				up_cpu_hotplug(cpu);
 			}
 			/* Reset core gating status flag */
-			up_set_gating_flag_status(cpu, 0);
+			up_set_gating_flag_status(cpu, DISABLE_GATE_STATUS);
 			/* Check whether each of the cpu has entered hotplug */
 			while (up_get_cpu_state(cpu) != CPU_HOTPLUG);
 		}
@@ -182,7 +182,7 @@ EXIT:
 #ifdef CONFIG_SMP
 	/* Check if any core is gated, resume it */
 	while (gated_cpu_count) {
-		up_set_gating_flag_status(gated_cpu_count, 0);
+		up_set_gating_flag_status(gated_cpu_count, DISABLE_GATE_STATUS);
 		gated_cpu_count--;
 	}
 #endif

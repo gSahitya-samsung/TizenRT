@@ -38,6 +38,7 @@
 #include "gic.h"
 #include "sched/sched.h"
 #include "barriers.h"
+#include "smp.h"
 
 #ifdef CONFIG_CPU_GATING
 static volatile uint32_t g_cpugating_flag[CONFIG_SMP_NCPUS];
@@ -46,7 +47,7 @@ static volatile uint32_t g_cpugating_flag[CONFIG_SMP_NCPUS];
  * Public Functions
  ****************************************************************************/
 
-void up_set_gating_flag_status(uint32_t CoreID, uint32_t val)
+void up_set_gating_flag_status(uint32_t CoreID, gate_status_t val)
 {
 	g_cpugating_flag[CoreID] = val;
 	ARM_DSB();

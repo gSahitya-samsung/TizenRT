@@ -85,7 +85,7 @@ bool vPortGateOtherCore(void)
 	2: The target core is already in gating state, proceed for flash operation
 	*/
 	if (!up_get_gating_flag_status(ulCoreID)) {
-		up_set_gating_flag_status(ulCoreID, 1);
+		up_set_gating_flag_status(ulCoreID, ENABLE_GATE_STATUS);
 
 		up_cpu_gating(ulCoreID);
 	}
@@ -110,7 +110,7 @@ void vPortWakeOtherCore(void)
 {
 	BaseType_t ulCoreID = up_cpu_index();
 	ulCoreID = (ulCoreID + 1) % CONFIG_SMP_NCPUS;
-	up_set_gating_flag_status(ulCoreID, 0);
+	up_set_gating_flag_status(ulCoreID, DISABLE_GATE_STATUS);
 }
 
 void vPortSecondaryOff(void)
